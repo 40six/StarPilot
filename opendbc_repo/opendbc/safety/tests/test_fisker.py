@@ -224,6 +224,43 @@ class TestFiskerCruiseState(unittest.TestCase):
     self.assertFalse(self.safety.get_controls_allowed())
 
 
+class TestFiskerSteerBaselineResync(unittest.TestCase):
+  """While not injecting (OEM 0x1D0 passing through), the angle rate-limiter baseline
+  (desired_angle_last) must track the measured wheel angle. Cruise stays on through the
+  not-steering window, so the generic not-controls-allowed reset never fires; without the
+  fisker-specific resync, a re-engage after the wheel moved crawls from a stale baseline and
+  rejects frames until it catches up, and the EPS aborts (observed on-vehicle 2026-10-25)."""
+
+  TX_MSGS = None
+  ANGLE_ZERO = 12480
+
+  def setUp(self):
+    self.safety = libsafety_py.libsafety
+    self.safety.set_safety_hooks(CarParams.SafetyModel.fisker, 0)
+    self.safety.init_tests()
+
+  def _meas(self, deg):
+    raw = int(deg * 16) + self.ANGLE_ZERO
+    dat = bytearray(8)
+    dat[2] = (raw >> 8) & 0xFF
+    dat[3] = raw & 0xFF
+    self.safety.safety_rx_hook(common.make_msg(0, 0x1C2, dat=bytes(dat)))
+
+  def test_baseline_tracks_measured_while_not_armed(self):
+    # Engage cruise so controls ARE allowed (the generic reset would not fire here).
+    dat = bytearray(8)
+    dat[4] = 3
+    self.safety.safety_rx_hook(common.make_msg(2, 0x313, dat=bytes(dat)))
+    self.assertTrue(self.safety.get_controls_allowed())
+    # Advance past the candidate-arm timeout so we count as "not injecting" (no 0x5D0 recently).
+    self.safety.set_timer(1_000_000)
+    # Driver turns the wheel to +40 deg while openpilot is not steering (no candidates).
+    for _ in range(5):
+      self._meas(40.0)
+    # Baseline now sits at the measured angle, not a stale 0, so a re-engage near +40 passes.
+    self.assertEqual(self.safety.get_desired_angle_last(), int(40.0 * 16))
+
+
 class TestFiskerAlwaysOnLateral(unittest.TestCase):
   """StarPilot port: Always On Lateral replaces sunnypilot MADS. acc_main_on follows the ADAS
   ACC state on bus 2 (>= Standby), and the MFS_RiBtnSouth LONG press (MFS_0x514) toggles

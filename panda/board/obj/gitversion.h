@@ -1,2 +1,2 @@
 extern const uint8_t gitversion[19];
-const uint8_t gitversion[19] = "DEV-cb57bc8c-DEBUG";
+const uint8_t gitversion[19] = "DEV-936a867a-DEBUG";

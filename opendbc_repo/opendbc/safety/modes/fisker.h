@@ -107,6 +107,7 @@ static bool fisker_cand_armed(void) {
 
 // Steering: raw CAN at 0.0625 deg/LSB, offset -780 deg. Raw 12480 == 0 deg.
 #define FISKER_ANGLE_ZERO_CAN 12480
+#define FISKER_MAX_ANGLE_CAN 9600   // 600 deg * 16 CAN/deg
 
 // Accel: raw CAN at 0.0004882 m/s^2/LSB, offset -16 m/s^2. raw = (accel + 16) / 0.0004882
 #define FISKER_ACCEL_INACTIVE 32773  //  0.0 m/s^2
@@ -157,6 +158,20 @@ static void fisker_rx_hook(const CANPacket_t *msg) {
     if (msg->addr == 0x1C2U) {
       int raw = (msg->data[2] << 8) | msg->data[3];
       update_sample(&angle_meas, raw - FISKER_ANGLE_ZERO_CAN);
+
+      // While openpilot is NOT injecting steering (OEM 0x1D0 passing through to the EPS),
+      // keep the angle rate-limiter's baseline tracking the measured wheel angle. The
+      // generic reset in steer_angle_cmd_checks only fires when controls aren't allowed,
+      // but on this port cruise (controls_allowed) stays on through the not-steering
+      // window, so without this desired_angle_last freezes at the last commanded value.
+      // At re-engage the rate check would then crawl from that stale value and reject
+      // every candidate for ~10 frames — the EPS sees the gap and aborts (observed
+      // on-vehicle 2026-10-25: engage bursts of dropped frames with controlsAllowed=True
+      // and a tiny commanded-vs-measured gap). Syncing to measured whenever we're not
+      // armed makes the first re-engage command land within one frame's rate limit.
+      if (!fisker_cand_armed()) {
+        desired_angle_last = SAFETY_CLAMP(angle_meas.values[0], -FISKER_MAX_ANGLE_CAN, FISKER_MAX_ANGLE_CAN);
+      }
     }
 
     // EPS_0x1C4: driver steering torque magnitude (BE 12-bit @ start 23 -> bytes 2, hi-nibble 3).
@@ -242,7 +257,7 @@ static void fisker_rx_hook(const CANPacket_t *msg) {
 // still uses the non-VM apply_std_steer_angle_limits, so the 5 fields below are all
 // that apply.
 static const AngleSteeringLimits FISKER_STEERING_LIMITS = {
-  .max_angle = 9600,             // 600 deg * 16 CAN/deg
+  .max_angle = FISKER_MAX_ANGLE_CAN,  // 600 deg * 16 CAN/deg
   .angle_deg_to_can = 16.0f,     // 1 / 0.0625
   .angle_rate_up_lookup = {
     {0., 5., 25.},
