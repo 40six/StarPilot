@@ -119,6 +119,38 @@ static uint8_t fisker_get_counter(const CANPacket_t *msg) {
 }
 
 
+// Cruise sources. Cars with ACC coded run the ADAS module's full ACC (ADAS_0x313, bus 2);
+// cars without it (ACC not coded) only have the VCU's basic hold-speed cruise
+// (VCU_0x358, bus 0) — the source jos-technion's original port used. Both share the
+// same enum (0=Off 1=Init 2=Standby 3=Active 4=Override 9/10=Failure; ADAS adds the
+// standstill states 5/6/11), so either one engages / makes ACC main available.
+static int fisker_adas_cc_state = 0;
+static int fisker_vcu_cc_state = 0;
+
+static bool fisker_cc_engaged(int cc_state, bool adas) {
+  bool engaged = (cc_state == 3) || (cc_state == 4);
+  if (adas) {
+    engaged = engaged || (cc_state == 5) || (cc_state == 6) || (cc_state == 11);
+  }
+  return engaged;
+}
+
+static bool fisker_cc_available(int cc_state) {
+  return (cc_state != 0) && (cc_state != 1) && (cc_state != 9) && (cc_state != 10);
+}
+
+static void fisker_update_cruise(void) {
+  pcm_cruise_check(fisker_cc_engaged(fisker_adas_cc_state, true) || fisker_cc_engaged(fisker_vcu_cc_state, false));
+
+  // StarPilot AOL: ACC main is "on" whenever either cruise reports Standby or above.
+  // Mirrors carstate's cruiseState.available. Dropping out also clears the LKAS-button
+  // AOL latch so the next drive starts with lateral off.
+  acc_main_on = fisker_cc_available(fisker_adas_cc_state) || fisker_cc_available(fisker_vcu_cc_state);
+  if (!acc_main_on) {
+    lkas_on = false;
+  }
+}
+
 static void fisker_rx_hook(const CANPacket_t *msg) {
   if (msg->bus == 0U) {
     // EPS_0x1C2: measured steering wheel angle (BE 16-bit @ start 23 -> bytes 2,3).
@@ -144,6 +176,13 @@ static void fisker_rx_hook(const CANPacket_t *msg) {
     if (msg->addr == 0x115U) {
       int whl_rf = ((msg->data[1] & 0x3FU) << 8) | msg->data[2];
       vehicle_moving = whl_rf > 0;
+    }
+
+    // VCU_0x358: VCU basic cruise state (VCU_Sts_CC_ICC, 4-bit @ start 35 -> data[4]
+    // low nibble). The only cruise on cars without ACC coded.
+    if (msg->addr == 0x358U) {
+      fisker_vcu_cc_state = msg->data[4] & 0x0FU;
+      fisker_update_cruise();
     }
 
     // MFS_0x514: MFSS steering-wheel buttons. MFS_RiBtnSouth (2-bit @ start 33, big-endian
@@ -188,19 +227,8 @@ static void fisker_rx_hook(const CANPacket_t *msg) {
   // keeps steering through a brake press exactly like sunnypilot's "Remain Active".
   if (msg->bus == 2U) {
     if (msg->addr == 0x313U) {
-      int cc_state = msg->data[4] & 0x0FU;
-      bool cruise_engaged = (cc_state == 3) || (cc_state == 4)
-                         || (cc_state == 5) || (cc_state == 6) || (cc_state == 11);
-      pcm_cruise_check(cruise_engaged);
-
-      // StarPilot AOL: ACC main is "on" whenever ADAS reports Standby or any engaged /
-      // override / standstill state (i.e. not Off(0), Init(1), Failure(9/10)). Mirrors
-      // carstate's cruiseState.available. Dropping out of that range also clears the
-      // LKAS-button AOL latch so the next drive starts with lateral off.
-      acc_main_on = (cc_state != 0) && (cc_state != 1) && (cc_state != 9) && (cc_state != 10);
-      if (!acc_main_on) {
-        lkas_on = false;
-      }
+      fisker_adas_cc_state = msg->data[4] & 0x0FU;
+      fisker_update_cruise();
     }
   }
 }
@@ -385,6 +413,8 @@ static safety_config fisker_init(uint16_t param) {
     // The safety framework gates rx_hook execution on rx_checks membership, so this
     // must be present for our pcm_cruise_check to actually fire on 0x313.
     {.msg = {{0x313, 2, 8,  50U, .ignore_checksum = true, .ignore_counter = true, .ignore_quality_flag = true}, { 0 }, { 0 }}},  // ADAS ACC state
+    // VCU_0x358: VCU basic cruise state — the cruise source on cars without ACC coded.
+    {.msg = {{0x358, 0, 8,  10U, .ignore_checksum = true, .ignore_counter = true, .ignore_quality_flag = true}, { 0 }, { 0 }}},  // VCU basic CC state
     // MFS_0x514 (MFSS buttons) whitelisted so our fisker_rx_hook actually runs on it —
     // the safety framework gates rx_hook execution on rx_checks membership. Without this,
     // our MFS_RiBtnSouth read in the rx hook was dead code and mads_button_press never
@@ -400,6 +430,8 @@ static safety_config fisker_init(uint16_t param) {
   // by an explicit developer opt-in.
   const uint16_t FISKER_FLAG_LONGITUDINAL_CONTROL = 1;
   fisker_longitudinal = GET_FLAG(param, FISKER_FLAG_LONGITUDINAL_CONTROL);
+  fisker_adas_cc_state = 0;
+  fisker_vcu_cc_state = 0;
 
   // Initialise the ICC relay tracker. Seeding to "now" opens its window immediately so
   // the OEM's first bus-0 frame can't race openpilot's spoof — openpilot is already

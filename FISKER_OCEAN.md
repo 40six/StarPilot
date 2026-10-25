@@ -31,6 +31,11 @@ StarPilot has no MADS, so the engagement model is StarPilot's:
   When cruise engages, openpilot engages with lateral, and the car's own ACC handles
   longitudinal. The sunnypilot port's North = "ACC only" / East = "ACC + lateral" split
   (`FiskerMadsArmed`) is **not ported**. Both buttons behave the same.
+- **Cars without ACC coded:** ADAS ACC never leaves Off, so cruise comes from the VCU's
+  basic hold-speed cruise (`VCU_0x358`) instead, in both carstate and panda safety, the
+  source jos-technion's original port used. Engaging basic cruise engages openpilot, and its
+  Standby counts as "ACC main on" for Always On Lateral. Longitudinal is then the car's
+  basic cruise: it holds the set speed and won't slow for traffic.
 - **Always On Lateral:** turn on *Always On Lateral* in StarPilot. Then either:
   - Main-cruise mode: lateral works whenever ADAS ACC is in Standby or above, or
   - LKAS-button mode: set *Vehicle → LKAS Button* to *Always On Lateral*. A **long press of

@@ -390,11 +390,25 @@ class CarState(CarStateBase):
     cc_disp = adas31c["ADAS_AccTrgSpdDisp"]
     cc_speed = 0.0 if cc_disp >= 255 else cc_disp * icc_to_ms
 
-    ret.cruiseState.enabled = cc_state in (3, 4, 5, 6, 11)
-    ret.cruiseState.available = cc_state not in (0, 1, 9, 10)
+    # Cars without ACC coded never bring ADAS ACC out of Off; they only have the VCU's
+    # basic hold-speed cruise (VCU_0x358 on bus 0, same Off/Init/Standby/Active/Override
+    # enum, no standstill). Panda's fisker_rx_hook accepts either source the same way.
+    vcu358 = cp_pt.vl["VCU_0x358"]
+    vcu_cc_state = int(vcu358["VCU_Sts_CC_ICC"])
+    vcu_cc_disp = vcu358["VCU_CcTrgSpdDisp"]
+    vcu_cc_speed = 0.0 if vcu_cc_disp >= 255 else vcu_cc_disp * icc_to_ms
+
+    adas_enabled = cc_state in (3, 4, 5, 6, 11)
+    adas_available = cc_state not in (0, 1, 9, 10)
+    vcu_enabled = vcu_cc_state in (3, 4)
+    vcu_available = vcu_cc_state not in (0, 1, 9, 10)
+    use_vcu = not adas_available and vcu_available
+
+    ret.cruiseState.enabled = adas_enabled or vcu_enabled
+    ret.cruiseState.available = adas_available or vcu_available
     ret.cruiseState.standstill = cc_state in (5, 6, 11)
-    ret.cruiseState.speed = cc_speed
-    ret.cruiseState.speedCluster = cc_speed
+    ret.cruiseState.speed = vcu_cc_speed if use_vcu else cc_speed
+    ret.cruiseState.speedCluster = ret.cruiseState.speed
 
     # ---- Buttons (MFSS) ----
     # Edge-detect per signal with a signal-specific "is pressed" predicate so that e.g.
@@ -419,7 +433,7 @@ class CarState(CarStateBase):
     # ADAS_Sts_ACC_ICC 9/10 = Failure_reversible/irreversible (same enum position as
     # the old VCU_Sts_CC_ICC path — the fault codes carry the same meaning across
     # both authors).
-    ret.accFaulted = cc_state in (9, 10) or bool(cp_pt.vl["ESP_0x114"]["ESP_FltIndcn_AEB"])
+    ret.accFaulted = cc_state in (9, 10) or vcu_cc_state in (9, 10) or bool(cp_pt.vl["ESP_0x114"]["ESP_FltIndcn_AEB"])
 
     # ---- OEM ADAS lateral counters (bus 2, for takeover alignment) --------
     # Snapshot the OEM ADAS's own AliveCounter and SSecOC_Fresh_Byte0 from bus 2. The
@@ -513,6 +527,7 @@ class CarState(CarStateBase):
       ("GW_Syn_All", 2),    # SecOC sync (~3 Hz)
       # Gateway-mirrored body/HMI (also present on ADASBUS)
       ("VCU_0x214", 50),    # gear, accel pedal %, brake
+      ("VCU_0x358", 10),    # VCU basic cruise state + set speed (cars without ACC coded)
       ("BCM_0x343", 20),    # doors
       ("BCM_0x335", 20),    # blinkers
       ("ACU_0x159", 20),    # driver seatbelt

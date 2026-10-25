@@ -191,12 +191,37 @@ class TestFiskerCruiseState(unittest.TestCase):
       self.assertTrue(self.safety.get_controls_allowed())
 
   def test_other_sources_ignored(self):
-    # VCU basic cruise (0x358) no longer engages; 0x313 only counts from the ADAS side (bus 2)
-    for addr, bus in ((0x358, 0), (0x313, 0)):
+    # 0x313 only counts from the ADAS side (bus 2), 0x358 only from the vehicle side (bus 0)
+    for addr, bus in ((0x358, 2), (0x313, 0)):
       with self.subTest(addr=hex(addr), bus=bus):
         self._rx_acc_state(0)
         self._rx_acc_state(3, addr=addr, bus=bus)
         self.assertFalse(self.safety.get_controls_allowed())
+
+  def test_vcu_basic_cruise_engages(self):
+    # Cars without ACC coded: ADAS stays Off, VCU basic cruise (0x358, bus 0) engages
+    for vcu_state in range(16):
+      with self.subTest(vcu_state=vcu_state):
+        self._rx_acc_state(0)
+        self._rx_acc_state(0, addr=0x358, bus=0)
+        self.assertFalse(self.safety.get_controls_allowed())
+        self._rx_acc_state(vcu_state, addr=0x358, bus=0)
+        self.assertEqual(self.safety.get_controls_allowed(), vcu_state in (3, 4))
+
+  def test_vcu_basic_cruise_standby_is_acc_main(self):
+    for vcu_state in range(16):
+      with self.subTest(vcu_state=vcu_state):
+        self._rx_acc_state(0)
+        self._rx_acc_state(vcu_state, addr=0x358, bus=0)
+        self.assertEqual(self.safety.get_acc_main_on(), vcu_state not in (0, 1, 9, 10))
+
+  def test_adas_off_does_not_drop_vcu_cruise(self):
+    self._rx_acc_state(3, addr=0x358, bus=0)
+    self.assertTrue(self.safety.get_controls_allowed())
+    self._rx_acc_state(0)  # ADAS ACC (not coded) keeps reporting Off
+    self.assertTrue(self.safety.get_controls_allowed())
+    self._rx_acc_state(2, addr=0x358, bus=0)  # brake -> Standby
+    self.assertFalse(self.safety.get_controls_allowed())
 
 
 class TestFiskerAlwaysOnLateral(unittest.TestCase):
