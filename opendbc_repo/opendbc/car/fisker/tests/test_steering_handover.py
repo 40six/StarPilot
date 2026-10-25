@@ -121,3 +121,46 @@ def test_fault_requires_valid_eps_recovery(car):
   assert update(1, 1, 8, 'steerFaultPermanent')
   assert not update(0, 0, 0, 'steerFaultPermanent')
   assert update(0, 0, 0)  # soft latch still waiting for a valid recovery
+
+
+def candidate_wires(frames):
+  """SecOC wire counters ((byte4 >> 2) & 0x3F) of this tick's 0x1D0 candidates."""
+  return sorted({(data[4] >> 2) & 0x3F for addr, data, bus in frames
+                 if addr == LAT_CANDIDATE_ADDR and bus == LAT_CANDIDATE_BUS})
+
+
+def test_gw_reset_emits_low_counter_candidates(car):
+  # At a GW SecOC reset the OEM wire counter restarts at 1 while carstate's reconstructed
+  # full counter still reads the stale high value for a couple of frames. The controller
+  # must emit post-reset low-counter candidates (wires 1..WINDOW) for a few ticks so panda
+  # has a match when the EPS's counter restarts — otherwise those frames drop and abort=8.
+  cp, sp, cs = car
+  controller = CarController(DBC[CAR.FISKER_OCEAN], cp)
+  controller.FPCP = sp
+  controller.secoc_key_verified = True
+  controller.secoc_key = bytes(16)
+  controller.always_on_lateral_enabled = True
+  controller.was_lat_engaged_prev = True   # already engaged: past the engage-delay window
+  controller.engage_delay_remaining = 0
+  cs.out = structs.CarState(steeringAngleDeg=0.0, vEgoRaw=20.0)
+  cs.secoc_trip, cs.secoc_reset = 1, 5
+  cs.oem_1d0_alive, cs.oem_1c0_alive = 3, 3
+  cs.oem_1d0_secoc_full_ctr = 47   # stale high counter, as carstate reports right after a reset
+  cc = structs.CarControl(latActive=True)
+
+  # Steady state: candidates straddle the (high) reconstructed counter, none near wire 1.
+  _, frames = controller.update(cc.as_reader(), cs, 0)
+  assert 47 in candidate_wires(frames)
+  assert not any(w <= 11 for w in candidate_wires(frames))
+
+  # GW reset: secoc_reset increments. carstate still reports the stale high counter.
+  cs.secoc_reset = 6
+  _, frames = controller.update(cc.as_reader(), cs, 10_000_000)
+  wires = candidate_wires(frames)
+  assert {1, 2, 3}.issubset(wires), wires        # low window present for OEM's restart
+  assert 47 in wires                             # high window still present until carstate catches up
+
+  # The low window persists for a few ticks, then stops once the hole is covered.
+  for _ in range(controller.POST_RESET_CAND_TICKS):
+    _, frames = controller.update(cc.as_reader(), cs, 20_000_000)
+  assert not any(w <= 11 for w in candidate_wires(frames) if w not in range(47 - 1, 47 + 11))
