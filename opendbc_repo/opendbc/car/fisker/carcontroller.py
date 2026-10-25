@@ -29,7 +29,14 @@ ACCEL_CAN_ID = 0x121
 # candidate and then rejects it: nothing is ever transmitted there.
 LAT_CANDIDATE_ADDR = 0x5D0   # carries an 0x1D0 payload; panda-internal (never on a real bus)
 LAT_CANDIDATE_BUS = 1        # addressed to the MRR link; panda rejects it after buffering
-LAT_CANDIDATE_WINDOW = 5     # number of candidates per tick
+# The window has to cover the whole round trip: OEM frame -> panda -> pandad -> card ->
+# sendcan -> panda. Candidate k is used ~(10*k - latency) ms after it reaches panda, and
+# panda only uses candidates younger than FISKER_CAND_FRESH_US (60 ms). Upstream's -1..+3
+# window covers ~30 ms. On a comma 3X running StarPilot that wasn't enough: almost every
+# substitution missed, the EPS saw 0x1D0 gaps and aborted with AbortFb=8 ~100 ms after going
+# Active. -1..+9 covers round trips up to ~90 ms; later candidates for the same counter
+# overwrite earlier ones in panda, so the angle used is always the newest available.
+LAT_CANDIDATE_WINDOW = 11    # number of candidates per tick
 LAT_CANDIDATE_LEAD = 1       # how many below OEM's observed counter to start (straddle it)
 
 
