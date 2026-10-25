@@ -34,6 +34,7 @@
 #include "opendbc/safety/modes/hyundai_canfd.h"
 #include "opendbc/safety/modes/volkswagen_meb.h"
 #endif
+#include "opendbc/safety/modes/fisker.h"
 
 uint32_t GET_BYTES(const CANPacket_t *msg, int start, int len) {
   uint32_t ret = 0U;
@@ -301,6 +302,17 @@ int safety_fwd_hook(int bus_num, int addr) {
   return blocked ? -1 : destination_bus;
 }
 
+// Called on a packet that safety_fwd_hook allowed to forward, just before it is sent on
+// the destination bus. A safety mode may rewrite to_send->data in place; returning false
+// drops the forward (nothing is sent). Default (no hook) forwards unchanged.
+bool safety_fwd_modify_hook(CANPacket_t *to_send) {
+  bool emit = true;
+  if ((current_hooks != NULL) && (current_hooks->fwd_modify != NULL)) {
+    emit = current_hooks->fwd_modify(to_send);
+  }
+  return emit;
+}
+
 // Given a CRC-8 poly, generate a static lookup table to use with a fast CRC-8
 // algorithm. Called at init time for safety modes using CRC-8.
 void gen_crc_lookup_table_8(uint8_t poly, uint8_t crc_lut[]) {
@@ -430,6 +442,7 @@ int set_safety_hooks(uint16_t mode, uint16_t param) {
     {SAFETY_TESLA, &tesla_hooks},
     {SAFETY_TESLA_PREAP, &tesla_preap_hooks},
     {SAFETY_VOLVO, &volvo_hooks},
+    {SAFETY_FISKER, &fisker_hooks},
 #ifdef CANFD
     {SAFETY_HYUNDAI_CANFD, &hyundai_canfd_hooks},
     {SAFETY_VOLKSWAGEN_MEB, &volkswagen_meb_hooks},

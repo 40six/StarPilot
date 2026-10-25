@@ -143,6 +143,45 @@ substantially. Its HKG angle-control and supporting safety architecture neverthe
 derivative in design and in identifiable portions of the implementation. The applicable upstream
 notices are preserved in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+## Fisker Ocean support adapted from the sunnypilot Fisker port
+
+The Fisker Ocean port in this fork (branch `fisker-ocean`) is adapted from the community
+sunnypilot port. Source revisions:
+
+- opendbc: <https://github.com/moistpope/opendbc> at
+  `06fecfbea5b037f676b91c2d86de7fab9888ed47` (Fisker work starts at
+  `9ced959420a9f6dc243e7c03cbdc81e686346aa8`, itself on top of jos-technion's
+  <https://github.com/jos-technion/opendbc-sunnypilot> `fisker-sunnypilot` / `remote_control`).
+- panda: <https://github.com/moistpope/panda> at `12314a67e6de9f434f73998ca77c12ca88a3efa5`
+  (`fwd_modify` forward hook).
+- sunnypilot: <https://github.com/moistpope/sunnypilot> at
+  `78a8f55b38a24dd027f8fdea3b4d937c40061872` and
+  <https://github.com/jos-technion/sunnypilot> (`fisker-sunnypilot`).
+
+Authors found in the relevant history: Majd Srour (`jos-technion`), `duncan999007`, `benkayuk`,
+and `moistpope` (repository owner / merges).
+
+Imported largely as-is: `opendbc/car/fisker/*`, `opendbc/dbc/fisker_ocean_adas.dbc`,
+`opendbc/dbc/fisker_ocean_mrr.dbc`, `opendbc/safety/modes/fisker.h`, the Fisker safety tests, the
+`fwd_modify` safety hook (`declarations.h`, `safety.h`, panda `fdcan.h`/`bxcan.h`) and the
+`uds.py` `log_data` switch.
+
+Material local deviations:
+
+- sunnypilot MADS is replaced by StarPilot Always On Lateral: the panda mode uses `aol_allowed`
+  instead of `controls_allowed_lateral`, sets `acc_main_on` from `ADAS_0x313`, and toggles
+  `lkas_on` on the `MFS_RiBtnSouth` long press; the carcontroller's lateral session is
+  `CarControl.enabled` or StarPilot AOL instead of `CarControlSP.mads.active`.
+- The per-button "ACC only" arming (`FiskerMadsArmed`), the phone remote-control override, the
+  web HUD and the live CAN-override editor are not ported. The ACC toggles keep their baseline
+  defaults through `FiskerFlagsSP` in `StarPilotCarParams.flags`.
+- SecOC key recovery over UDS runs from StarPilot's existing `card.py` key loading.
+- CAN ignition from `BCM_0x333` lives in panda `ignition_can_hook` with an AliveCounter check,
+  because Ford also uses address 0x333, rather than being unconditional as upstream.
+- Interfaces adapted to StarPilot signatures (`FPCP`, `starpilot_toggles`).
+
+The upstream contributors do not maintain or endorse this adaptation.
+
 ## Policy for future third-party ports
 
 Before publishing a third-party port:

@@ -1,0 +1,1429 @@
+VERSION ""
+
+
+NS_ :
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	BA_DEF_DEF_
+
+BS_:
+
+BU_: MRR ADAS
+
+BO_ 256 ADAS_MRR_TimeSync: 16 ADAS
+ SG_ TSyn_Type : 7|8@0+ (1,0) [0|255] ""  MRR
+ SG_ TSyn_CRC : 15|8@0+ (1,0) [0|255] ""  MRR
+ SG_ TSyn_TimeDomain : 23|4@0+ (1,0) [0|15] ""  MRR
+ SG_ TSyn_SeqCounter : 19|4@0+ (1,0) [0|15] ""  MRR
+ SG_ TSyn_UserByte : 31|8@0+ (1,0) [0|255] ""  MRR
+ SG_ TSyn_TimeValue : 39|32@0+ (1,0) [0|4.29497e+09] ""  MRR
+
+BO_ 512 ADAS_MRR_VehDyn: 32 ADAS
+ SG_ ADAS_MRR_200_CheckSum : 7|8@0+ (1,0) [0|255] ""  MRR
+ SG_ ADAS_MRR_200_AliveCounter : 11|4@0+ (1,0) [0|14] ""  MRR
+ SG_ ADAS_MRR_VehSpd : 31|16@0+ (0.1,0) [0|6553.5] "km/h"  MRR
+ SG_ ADAS_MRR_YawRate : 95|16@0+ (0.01,-180) [-180|475.35] "deg/s"  MRR
+ SG_ ADAS_MRR_DrvDir : 171|2@0+ (1,0) [0|3] ""  MRR
+ SG_ ADAS_MRR_200_SSecOC_Fresh_Byte0 : 231|8@0+ (1,0) [0|255] ""  MRR
+ SG_ ADAS_MRR_200_SSecOC_MAC_Byte0 : 239|8@0+ (1,0) [0|255] ""  MRR
+ SG_ ADAS_MRR_200_SSecOC_MAC_Byte1 : 247|8@0+ (1,0) [0|255] ""  MRR
+ SG_ ADAS_MRR_200_SSecOC_MAC_Byte2 : 255|8@0+ (1,0) [0|255] ""  MRR
+
+BO_ 513 ADAS_MRR_WheelSpd: 20 ADAS
+ SG_ ADAS_MRR_201_CheckSum : 7|8@0+ (1,0) [0|255] ""  MRR
+ SG_ ADAS_MRR_201_AliveCounter : 11|4@0+ (1,0) [0|14] ""  MRR
+ SG_ ADAS_MRR_WhlSpd_FL : 31|15@0+ (0.03125,0) [0|1023.97] "km/h"  MRR
+ SG_ ADAS_MRR_WhlSpd_FL_Vld : 32|1@0+ (1,0) [0|1] ""  MRR
+ SG_ ADAS_MRR_WhlSpd_FR : 47|15@0+ (0.03125,0) [0|1023.97] "km/h"  MRR
+ SG_ ADAS_MRR_WhlSpd_FR_Vld : 48|1@0+ (1,0) [0|1] ""  MRR
+ SG_ ADAS_MRR_WhlSpd_RL : 63|15@0+ (0.03125,0) [0|1023.97] "km/h"  MRR
+ SG_ ADAS_MRR_WhlSpd_RL_Vld : 64|1@0+ (1,0) [0|1] ""  MRR
+ SG_ ADAS_MRR_WhlSpd_RR : 79|15@0+ (0.03125,0) [0|1023.97] "km/h"  MRR
+ SG_ ADAS_MRR_WhlSpd_RR_Vld : 80|1@0+ (1,0) [0|1] ""  MRR
+ SG_ ADAS_MRR_WhlDir_FL : 95|3@0+ (1,0) [0|7] ""  MRR
+ SG_ ADAS_MRR_WhlDir_FR : 92|3@0+ (1,0) [0|7] ""  MRR
+ SG_ ADAS_MRR_WhlDir_RL : 89|3@0+ (1,0) [0|7] ""  MRR
+ SG_ ADAS_MRR_WhlDir_RR : 102|3@0+ (1,0) [0|7] ""  MRR
+ SG_ ADAS_MRR_WhlPulseCtr_FL : 111|8@0+ (1,0) [0|255] ""  MRR
+ SG_ ADAS_MRR_WhlPulseCtr_FR : 119|8@0+ (1,0) [0|255] ""  MRR
+ SG_ ADAS_MRR_WhlPulseCtr_RL : 127|8@0+ (1,0) [0|255] ""  MRR
+ SG_ ADAS_MRR_WhlPulseCtr_RR : 135|8@0+ (1,0) [0|255] ""  MRR
+
+BO_ 514 ADAS_MRR_Time: 12 ADAS
+ SG_ ADAS_MRR_202_CheckSum : 7|8@0+ (1,0) [0|255] ""  MRR
+ SG_ ADAS_MRR_202_AliveCounter : 11|4@0+ (1,0) [0|14] ""  MRR
+ SG_ ADAS_MRR_Time_Unk : 23|17@0+ (1,0) [0|131071] ""  MRR
+ SG_ ADAS_MRR_Time_Hour : 32|5@0+ (1,0) [0|31] "h"  MRR
+ SG_ ADAS_MRR_Time_Minute : 38|6@0+ (1,0) [0|63] "min"  MRR
+ SG_ ADAS_MRR_Time_Second : 43|6@0+ (1,0) [0|63] "s"  MRR
+
+BO_ 768 MRR_Header: 32 MRR
+ SG_ MRR_300_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_300_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_ObjListTime_Sec : 31|32@0+ (1,0) [0|4.29497e+09] "s"  ADAS
+ SG_ MRR_ObjListTime_NSec : 63|32@0+ (1,0) [0|4.29497e+09] "ns"  ADAS
+ SG_ MRR_Hdr_Unk_B11 : 95|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_MeasTime_Sec : 111|32@0+ (1,0) [0|4.29497e+09] "s"  ADAS
+ SG_ MRR_MeasTime_NSec : 143|32@0+ (1,0) [0|4.29497e+09] "ns"  ADAS
+ SG_ MRR_CycleCounter : 175|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_NumObjects : 183|8@0+ (1,0) [0|32] ""  ADAS
+ SG_ MRR_LocalTime_Sec : 191|16@0+ (1,0) [0|65535] "s"  ADAS
+ SG_ MRR_LocalTime_SubSec : 207|24@0+ (2.56e-07,0) [0|4.29497] "s"  ADAS
+
+BO_ 769 MRR_Status: 4 MRR
+ SG_ MRR_301_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_301_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Status_B2 : 23|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Status_B3 : 31|8@0+ (1,0) [0|255] ""  ADAS
+
+BO_ 784 MRR_Obj00: 48 MRR
+ SG_ MRR_Obj00_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj00_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj00_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj00_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj00_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj00_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj00_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj00_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj00_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj00_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj00_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj00_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj00_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj00_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj00_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj00_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj00_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj00_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj00_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj00_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj00_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj00_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj00_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj00_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj00_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj00_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj00_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj00_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj00_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj00_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj00_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj00_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj00_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj00_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj00_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 785 MRR_Obj01: 48 MRR
+ SG_ MRR_Obj01_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj01_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj01_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj01_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj01_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj01_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj01_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj01_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj01_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj01_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj01_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj01_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj01_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj01_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj01_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj01_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj01_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj01_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj01_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj01_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj01_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj01_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj01_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj01_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj01_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj01_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj01_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj01_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj01_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj01_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj01_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj01_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj01_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj01_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj01_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 786 MRR_Obj02: 48 MRR
+ SG_ MRR_Obj02_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj02_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj02_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj02_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj02_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj02_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj02_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj02_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj02_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj02_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj02_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj02_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj02_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj02_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj02_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj02_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj02_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj02_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj02_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj02_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj02_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj02_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj02_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj02_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj02_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj02_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj02_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj02_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj02_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj02_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj02_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj02_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj02_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj02_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj02_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 787 MRR_Obj03: 48 MRR
+ SG_ MRR_Obj03_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj03_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj03_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj03_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj03_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj03_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj03_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj03_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj03_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj03_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj03_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj03_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj03_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj03_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj03_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj03_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj03_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj03_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj03_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj03_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj03_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj03_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj03_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj03_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj03_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj03_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj03_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj03_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj03_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj03_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj03_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj03_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj03_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj03_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj03_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 788 MRR_Obj04: 48 MRR
+ SG_ MRR_Obj04_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj04_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj04_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj04_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj04_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj04_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj04_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj04_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj04_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj04_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj04_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj04_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj04_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj04_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj04_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj04_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj04_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj04_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj04_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj04_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj04_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj04_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj04_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj04_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj04_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj04_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj04_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj04_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj04_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj04_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj04_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj04_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj04_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj04_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj04_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 789 MRR_Obj05: 48 MRR
+ SG_ MRR_Obj05_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj05_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj05_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj05_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj05_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj05_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj05_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj05_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj05_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj05_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj05_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj05_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj05_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj05_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj05_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj05_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj05_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj05_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj05_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj05_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj05_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj05_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj05_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj05_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj05_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj05_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj05_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj05_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj05_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj05_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj05_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj05_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj05_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj05_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj05_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 790 MRR_Obj06: 48 MRR
+ SG_ MRR_Obj06_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj06_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj06_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj06_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj06_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj06_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj06_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj06_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj06_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj06_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj06_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj06_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj06_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj06_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj06_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj06_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj06_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj06_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj06_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj06_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj06_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj06_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj06_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj06_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj06_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj06_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj06_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj06_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj06_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj06_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj06_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj06_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj06_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj06_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj06_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 791 MRR_Obj07: 48 MRR
+ SG_ MRR_Obj07_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj07_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj07_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj07_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj07_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj07_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj07_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj07_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj07_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj07_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj07_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj07_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj07_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj07_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj07_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj07_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj07_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj07_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj07_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj07_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj07_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj07_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj07_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj07_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj07_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj07_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj07_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj07_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj07_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj07_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj07_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj07_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj07_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj07_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj07_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 792 MRR_Obj08: 48 MRR
+ SG_ MRR_Obj08_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj08_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj08_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj08_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj08_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj08_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj08_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj08_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj08_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj08_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj08_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj08_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj08_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj08_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj08_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj08_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj08_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj08_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj08_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj08_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj08_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj08_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj08_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj08_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj08_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj08_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj08_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj08_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj08_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj08_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj08_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj08_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj08_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj08_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj08_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 793 MRR_Obj09: 48 MRR
+ SG_ MRR_Obj09_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj09_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj09_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj09_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj09_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj09_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj09_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj09_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj09_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj09_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj09_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj09_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj09_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj09_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj09_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj09_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj09_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj09_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj09_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj09_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj09_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj09_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj09_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj09_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj09_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj09_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj09_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj09_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj09_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj09_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj09_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj09_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj09_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj09_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj09_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 794 MRR_Obj10: 48 MRR
+ SG_ MRR_Obj10_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj10_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj10_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj10_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj10_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj10_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj10_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj10_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj10_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj10_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj10_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj10_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj10_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj10_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj10_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj10_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj10_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj10_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj10_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj10_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj10_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj10_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj10_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj10_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj10_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj10_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj10_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj10_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj10_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj10_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj10_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj10_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj10_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj10_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj10_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 795 MRR_Obj11: 48 MRR
+ SG_ MRR_Obj11_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj11_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj11_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj11_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj11_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj11_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj11_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj11_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj11_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj11_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj11_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj11_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj11_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj11_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj11_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj11_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj11_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj11_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj11_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj11_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj11_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj11_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj11_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj11_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj11_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj11_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj11_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj11_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj11_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj11_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj11_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj11_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj11_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj11_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj11_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 796 MRR_Obj12: 48 MRR
+ SG_ MRR_Obj12_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj12_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj12_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj12_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj12_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj12_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj12_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj12_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj12_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj12_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj12_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj12_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj12_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj12_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj12_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj12_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj12_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj12_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj12_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj12_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj12_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj12_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj12_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj12_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj12_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj12_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj12_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj12_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj12_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj12_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj12_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj12_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj12_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj12_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj12_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 797 MRR_Obj13: 48 MRR
+ SG_ MRR_Obj13_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj13_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj13_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj13_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj13_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj13_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj13_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj13_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj13_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj13_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj13_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj13_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj13_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj13_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj13_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj13_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj13_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj13_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj13_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj13_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj13_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj13_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj13_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj13_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj13_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj13_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj13_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj13_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj13_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj13_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj13_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj13_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj13_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj13_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj13_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 798 MRR_Obj14: 48 MRR
+ SG_ MRR_Obj14_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj14_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj14_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj14_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj14_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj14_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj14_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj14_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj14_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj14_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj14_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj14_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj14_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj14_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj14_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj14_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj14_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj14_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj14_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj14_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj14_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj14_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj14_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj14_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj14_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj14_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj14_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj14_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj14_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj14_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj14_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj14_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj14_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj14_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj14_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 799 MRR_Obj15: 48 MRR
+ SG_ MRR_Obj15_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj15_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj15_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj15_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj15_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj15_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj15_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj15_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj15_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj15_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj15_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj15_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj15_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj15_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj15_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj15_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj15_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj15_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj15_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj15_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj15_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj15_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj15_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj15_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj15_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj15_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj15_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj15_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj15_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj15_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj15_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj15_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj15_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj15_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj15_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 800 MRR_Obj16: 48 MRR
+ SG_ MRR_Obj16_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj16_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj16_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj16_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj16_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj16_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj16_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj16_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj16_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj16_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj16_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj16_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj16_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj16_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj16_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj16_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj16_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj16_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj16_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj16_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj16_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj16_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj16_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj16_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj16_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj16_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj16_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj16_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj16_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj16_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj16_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj16_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj16_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj16_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj16_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 801 MRR_Obj17: 48 MRR
+ SG_ MRR_Obj17_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj17_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj17_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj17_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj17_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj17_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj17_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj17_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj17_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj17_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj17_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj17_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj17_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj17_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj17_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj17_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj17_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj17_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj17_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj17_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj17_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj17_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj17_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj17_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj17_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj17_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj17_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj17_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj17_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj17_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj17_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj17_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj17_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj17_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj17_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 802 MRR_Obj18: 48 MRR
+ SG_ MRR_Obj18_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj18_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj18_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj18_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj18_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj18_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj18_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj18_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj18_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj18_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj18_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj18_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj18_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj18_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj18_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj18_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj18_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj18_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj18_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj18_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj18_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj18_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj18_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj18_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj18_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj18_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj18_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj18_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj18_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj18_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj18_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj18_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj18_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj18_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj18_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 803 MRR_Obj19: 48 MRR
+ SG_ MRR_Obj19_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj19_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj19_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj19_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj19_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj19_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj19_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj19_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj19_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj19_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj19_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj19_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj19_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj19_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj19_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj19_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj19_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj19_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj19_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj19_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj19_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj19_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj19_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj19_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj19_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj19_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj19_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj19_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj19_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj19_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj19_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj19_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj19_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj19_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj19_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 804 MRR_Obj20: 48 MRR
+ SG_ MRR_Obj20_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj20_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj20_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj20_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj20_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj20_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj20_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj20_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj20_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj20_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj20_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj20_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj20_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj20_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj20_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj20_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj20_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj20_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj20_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj20_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj20_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj20_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj20_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj20_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj20_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj20_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj20_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj20_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj20_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj20_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj20_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj20_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj20_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj20_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj20_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 805 MRR_Obj21: 48 MRR
+ SG_ MRR_Obj21_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj21_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj21_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj21_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj21_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj21_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj21_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj21_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj21_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj21_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj21_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj21_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj21_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj21_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj21_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj21_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj21_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj21_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj21_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj21_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj21_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj21_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj21_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj21_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj21_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj21_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj21_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj21_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj21_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj21_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj21_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj21_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj21_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj21_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj21_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 806 MRR_Obj22: 48 MRR
+ SG_ MRR_Obj22_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj22_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj22_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj22_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj22_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj22_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj22_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj22_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj22_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj22_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj22_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj22_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj22_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj22_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj22_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj22_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj22_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj22_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj22_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj22_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj22_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj22_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj22_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj22_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj22_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj22_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj22_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj22_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj22_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj22_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj22_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj22_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj22_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj22_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj22_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 807 MRR_Obj23: 48 MRR
+ SG_ MRR_Obj23_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj23_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj23_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj23_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj23_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj23_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj23_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj23_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj23_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj23_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj23_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj23_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj23_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj23_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj23_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj23_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj23_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj23_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj23_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj23_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj23_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj23_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj23_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj23_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj23_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj23_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj23_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj23_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj23_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj23_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj23_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj23_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj23_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj23_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj23_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 808 MRR_Obj24: 48 MRR
+ SG_ MRR_Obj24_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj24_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj24_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj24_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj24_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj24_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj24_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj24_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj24_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj24_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj24_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj24_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj24_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj24_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj24_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj24_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj24_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj24_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj24_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj24_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj24_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj24_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj24_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj24_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj24_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj24_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj24_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj24_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj24_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj24_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj24_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj24_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj24_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj24_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj24_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 809 MRR_Obj25: 48 MRR
+ SG_ MRR_Obj25_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj25_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj25_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj25_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj25_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj25_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj25_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj25_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj25_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj25_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj25_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj25_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj25_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj25_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj25_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj25_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj25_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj25_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj25_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj25_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj25_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj25_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj25_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj25_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj25_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj25_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj25_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj25_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj25_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj25_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj25_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj25_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj25_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj25_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj25_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 810 MRR_Obj26: 48 MRR
+ SG_ MRR_Obj26_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj26_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj26_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj26_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj26_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj26_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj26_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj26_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj26_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj26_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj26_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj26_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj26_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj26_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj26_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj26_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj26_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj26_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj26_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj26_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj26_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj26_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj26_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj26_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj26_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj26_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj26_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj26_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj26_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj26_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj26_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj26_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj26_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj26_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj26_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 811 MRR_Obj27: 48 MRR
+ SG_ MRR_Obj27_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj27_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj27_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj27_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj27_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj27_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj27_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj27_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj27_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj27_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj27_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj27_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj27_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj27_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj27_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj27_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj27_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj27_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj27_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj27_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj27_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj27_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj27_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj27_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj27_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj27_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj27_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj27_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj27_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj27_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj27_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj27_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj27_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj27_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj27_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 812 MRR_Obj28: 48 MRR
+ SG_ MRR_Obj28_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj28_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj28_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj28_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj28_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj28_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj28_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj28_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj28_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj28_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj28_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj28_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj28_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj28_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj28_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj28_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj28_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj28_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj28_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj28_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj28_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj28_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj28_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj28_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj28_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj28_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj28_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj28_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj28_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj28_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj28_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj28_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj28_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj28_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj28_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 813 MRR_Obj29: 48 MRR
+ SG_ MRR_Obj29_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj29_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj29_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj29_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj29_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj29_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj29_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj29_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj29_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj29_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj29_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj29_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj29_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj29_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj29_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj29_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj29_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj29_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj29_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj29_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj29_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj29_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj29_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj29_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj29_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj29_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj29_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj29_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj29_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj29_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj29_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj29_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj29_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj29_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj29_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 814 MRR_Obj30: 48 MRR
+ SG_ MRR_Obj30_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj30_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj30_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj30_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj30_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj30_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj30_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj30_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj30_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj30_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj30_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj30_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj30_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj30_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj30_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj30_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj30_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj30_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj30_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj30_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj30_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj30_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj30_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj30_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj30_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj30_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj30_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj30_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj30_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj30_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj30_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj30_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj30_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj30_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj30_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+
+BO_ 815 MRR_Obj31: 48 MRR
+ SG_ MRR_Obj31_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj31_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Obj31_ID : 31|16@0+ (1,0) [0|65535] ""  ADAS
+ SG_ MRR_Obj31_Unk_B5 : 47|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj31_MeasHistory : 45|14@0+ (1,0) [0|16383] ""  ADAS
+ SG_ MRR_Obj31_State : 63|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_Obj31_Quality : 61|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj31_Age : 71|14@0+ (1,0) [0|16383] "cycles"  ADAS
+ SG_ MRR_Obj31_Flag_B9_6 : 73|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj31_Flag_B9_7 : 72|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj31_Flag_B10_0 : 87|1@0+ (1,0) [0|1] ""  ADAS
+ SG_ MRR_Obj31_DistLong : 86|13@0+ (0.05,0) [0|409.55] "m"  ADAS
+ SG_ MRR_Obj31_DistLong_Std : 89|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj31_DistLat : 99|13@0+ (0.05,-204.8) [-204.8|204.75] "m"  ADAS
+ SG_ MRR_Obj31_DistLat_Std : 118|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj31_DistCorr : 112|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj31_VrelLong : 122|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj31_VrelLong_Std : 142|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj31_VrelLat : 136|12@0+ (0.06,-122.88) [-122.88|122.82] "m/s"  ADAS
+ SG_ MRR_Obj31_VrelLat_Std : 156|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj31_VrelCorr : 166|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj31_ArelLong : 160|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj31_ArelLong_Std : 181|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj31_ArelLat : 191|11@0+ (0.03,-30.72) [-30.72|30.69] "m/s2"  ADAS
+ SG_ MRR_Obj31_ArelLat_Std : 196|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj31_ArelCorr : 206|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj31_DynProp : 200|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj31_Heading : 212|8@0+ (1.40625,-180) [-180|178.594] "deg"  ADAS
+ SG_ MRR_Obj31_Unk_B28 : 230|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj31_Width : 244|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj31_Length : 260|6@0+ (0.2,0) [0|12.6] "m"  ADAS
+ SG_ MRR_Obj31_Class : 278|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj31_Status : 274|4@0+ (1,0) [0|15] ""  ADAS
+ SG_ MRR_Obj31_Unk_B35 : 286|13@0+ (1,0) [0|8191] ""  ADAS
+ SG_ MRR_Obj31_CycleCounter : 289|6@0+ (1,0) [0|63] ""  ADAS
+ SG_ MRR_Obj31_SSecOC_Fresh_Byte0 : 359|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj31_SSecOC_MAC_Byte0 : 367|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj31_SSecOC_MAC_Byte1 : 375|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_Obj31_SSecOC_MAC_Byte2 : 383|8@0+ (1,0) [0|255] ""  ADAS
+
+BO_ 1024 MRR_EgoMotion: 48 MRR
+ SG_ MRR_EgoSpeed : 31|16@0+ (0.00305185,-100) [-100|100.003] "m/s"  ADAS
+ SG_ MRR_EgoYawRate : 53|14@0+ (0.1837,-1504.69) [-1504.69|1504.87] "deg/s"  ADAS
+ SG_ MRR_Ego_Unk_B9 : 74|15@0+ (1,0) [0|32767] ""  ADAS
+ SG_ MRR_EgoCurvState : 145|2@0+ (1,0) [0|3] ""  ADAS
+ SG_ MRR_EgoYawRateFine : 195|12@0+ (0.02204,-45.116) [-45.116|45.1378] "deg/s"  ADAS
+ SG_ MRR_EgoCurvature : 225|14@0+ (1.24e-05,-0.101568) [-0.101568|0.101581] "1/m"  ADAS
+
+BO_ 1025 MRR_Unk_401: 20 MRR
+
+BO_ 1026 MRR_Unk_402: 48 MRR
+ SG_ MRR_402_B5 : 47|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_402_B19 : 159|8@0+ (1,0) [0|255] ""  ADAS
+
+BO_ 1280 MRR_Env: 48 MRR
+ SG_ MRR_500_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_500_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+ SG_ MRR_Env_MeasTime_Sec : 23|24@0+ (1,0) [0|1.67772e+07] "s"  ADAS
+ SG_ MRR_Env_MeasTime_Frac : 47|12@0+ (0.000244141,0) [0|0.999756] "s"  ADAS
+
+BO_ 1536 MRR_Config: 20 MRR
+ SG_ MRR_600_CheckSum : 7|8@0+ (1,0) [0|255] ""  ADAS
+ SG_ MRR_600_AliveCounter : 11|4@0+ (1,0) [0|14] ""  ADAS
+
+
+CM_ "Fisker Ocean mid-range radar (MRR) private CAN-FD bus (panda bus 1). Draft, reverse-engineered from route 6bdf6a23860be7bd/000000b5--bfe13ac451 (61 s, low-speed parking-lot drive). Not in the FM29 ADASBUS matrix. E2E on most frames: CRC-8 poly 0x1D, init 0, xorout 0, computed over [DataID] + bytes 1..N, same scheme as fiskercan.fisker_plain_checksum. Object slots are documented on MRR_Obj00 and are identical for MRR_Obj01..31.";
+CM_ BO_ 256 "AUTOSAR CanTSyn global time, 10 Hz SYNC/FUP pairs. Type 0x20 = SYNC (TimeValue = seconds), 0x28 = FUP (TimeValue = nanoseconds). The MRR timestamps in 0x300/0x500 are in this time base.";
+CM_ BO_ 512 "Ego motion fed to the MRR, 100 Hz. E2E CRC8 (0x1D) DataID 64 over bytes 1..28; SecOC MAC in bytes 29..31. Bytes 5-10 are zero on this car; bytes 15-17 (0x402290) and 21-22 carry constants.";
+CM_ SG_ 512 ADAS_MRR_VehSpd "Unsigned speed, = carState.vEgo*3.6 exactly (wheel-speed based, ~3% below GPS on this car). Direction in ADAS_MRR_DrvDir.";
+CM_ SG_ 512 ADAS_MRR_YawRate "Same encoding as YRS_YawRate on ADASBUS; positive = left (CCW).";
+CM_ BO_ 513 "Wheel speeds/directions/pulse counters to the MRR, 50 Hz. E2E DataID 65 over bytes 1..19. Bytes 17-19 constant 0x4FC984. Pulse-counter wheel order assumed FL,FR,RL,RR.";
+CM_ BO_ 514 "Vehicle clock, 1 Hz. E2E DataID 67. Hour/minute/second verified against GPS (UTC; car clock ~8 s ahead). The upper 17 bits (0x1609 throughout the log) are probably the date but did not decode as a calendar. Bytes 7, 9, 10 vary and are unknown.";
+CM_ BO_ 768 "Radar cycle header, one per 65.01 ms cycle, sent before the 32 object slots. E2E DataID 16.";
+CM_ SG_ 768 MRR_ObjListTime_Sec "Global (CanTSyn) time of the object list; ~54 ms before the frame is received.";
+CM_ SG_ 768 MRR_MeasTime_Sec "Global (CanTSyn) time of the measurement/scan; ~131 ms before the frame is received, ~78 ms before ObjListTime. Same value as MRR_Env_MeasTime in 0x500.";
+CM_ SG_ 768 MRR_Hdr_Unk_B11 "Constant 0x4750.";
+CM_ SG_ 768 MRR_CycleCounter "Same value as MRR_ObjNN_CycleCounter in the slots of this cycle.";
+CM_ SG_ 768 MRR_NumObjects "Number of populated slots in 0x310-0x32F this cycle (matched 937/937 cycles).";
+CM_ SG_ 768 MRR_LocalTime_Sec "Radar free-running clock: seconds + SubSec (256 ns ticks). Exactly 65.0117 ms per cycle, ~1.34 s behind MeasTime and drifting ~30 ppm.";
+CM_ BO_ 769 "50 Hz, E2E DataID 53 (radar DataID range). Payload constant 0x01 0x00 in this log.";
+CM_ BO_ 784 "Object slot 0. E2E DataID 17.";
+CM_ BO_ 785 "Object slot 1. E2E DataID 18.";
+CM_ BO_ 786 "Object slot 2. E2E DataID 19.";
+CM_ BO_ 787 "Object slot 3. E2E DataID 20.";
+CM_ BO_ 788 "Object slot 4. E2E DataID 21.";
+CM_ BO_ 789 "Object slot 5. E2E DataID 22.";
+CM_ BO_ 790 "Object slot 6. E2E DataID 23.";
+CM_ BO_ 791 "Object slot 7. E2E DataID 24.";
+CM_ BO_ 792 "Object slot 8. E2E DataID 25.";
+CM_ BO_ 793 "Object slot 9. E2E DataID 26.";
+CM_ BO_ 794 "Object slot 10. E2E DataID 27.";
+CM_ BO_ 795 "Object slot 11. E2E DataID 28.";
+CM_ BO_ 796 "Object slot 12. E2E DataID 29.";
+CM_ BO_ 797 "Object slot 13. E2E DataID 30.";
+CM_ BO_ 798 "Object slot 14. E2E DataID 32.";
+CM_ BO_ 799 "Object slot 15. E2E DataID 33.";
+CM_ BO_ 800 "Object slot 16. E2E DataID 34.";
+CM_ BO_ 801 "Object slot 17. E2E DataID 35.";
+CM_ BO_ 802 "Object slot 18. E2E DataID 36.";
+CM_ BO_ 803 "Object slot 19. E2E DataID 37.";
+CM_ BO_ 804 "Object slot 20. E2E DataID 38.";
+CM_ BO_ 805 "Object slot 21. E2E DataID 39.";
+CM_ BO_ 806 "Object slot 22. E2E DataID 40.";
+CM_ BO_ 807 "Object slot 23. E2E DataID 41.";
+CM_ BO_ 808 "Object slot 24. E2E DataID 42.";
+CM_ BO_ 809 "Object slot 25. E2E DataID 43.";
+CM_ BO_ 810 "Object slot 26. E2E DataID 44.";
+CM_ BO_ 811 "Object slot 27. E2E DataID 45.";
+CM_ BO_ 812 "Object slot 28. E2E DataID 46.";
+CM_ BO_ 813 "Object slot 29. E2E DataID 48.";
+CM_ BO_ 814 "Object slot 30. E2E DataID 49.";
+CM_ BO_ 815 "Object slot 31. E2E DataID 50 over bytes 1..44; SecOC MAC in bytes 45..47 (freshness byte 44 = 0 throughout the log).";
+CM_ SG_ 784 MRR_Obj00_ID "Persistent track ID (increments for new tracks, wraps in 11 bits so far). Empty slot = ID 0, byte 5 = 0x40, bytes 6..43 = 0. Slots fill from 0x310 upward, roughly oldest track first.";
+CM_ SG_ 784 MRR_Obj00_Unk_B5 "Always 1, including empty slots.";
+CM_ SG_ 784 MRR_Obj00_MeasHistory "Shift register, LSB = this cycle: 1 = track got a detection, 0 = coasted.";
+CM_ SG_ 784 MRR_Obj00_State "Rises 0->3 as a track matures; drops right before a track is deleted.";
+CM_ SG_ 784 MRR_Obj00_Quality "13 for mature stationary tracks, 5-10 otherwise; meaning unknown.";
+CM_ SG_ 784 MRR_Obj00_Age "Radar cycles (65 ms) since track creation; MeasHistory has (Age-3) valid bits.";
+CM_ SG_ 784 MRR_Obj00_DistLong "x, forward from the radar. Scale checked against GPS (0.0503 m/bit).";
+CM_ SG_ 784 MRR_Obj00_DistLat "y, POSITIVE = RIGHT (openpilot yRel = -DistLat). Sign from ego-odometry fits in turns; scale 0.05 matches but only to ~10%.";
+CM_ SG_ 784 MRR_Obj00_VrelLong "Relative velocity. Stationary targets read -ADAS_MRR_VehSpd at 0.06 (16.7 raw per m/s), but that speed is wheel speed, 3.1% under GPS: against GPS they fit 0.0618-0.0631, i.e. 0.0625 (1/16). The web HUD world model applies 0.0625/0.06 (world_model.MEASURED_CALIBRATION). The scale stays 0.06 here on purpose: it matches carState.vEgo (wheel speed), so radard's vLead = vRel + vEgo is ~0 for stationary targets.";
+CM_ SG_ 784 MRR_Obj00_VrelLat "Positive = right. Translational only: stationary targets stay ~0 in turns.";
+CM_ SG_ 784 MRR_Obj00_ArelLong "Scale ~0.031 m/s2 per bit from -aEgo on stationary targets; 0.03 vs 1/32 not resolved.";
+CM_ SG_ 784 MRR_Obj00_DistLong_Std "6-bit uncertainty code (monotonic, smaller = better), scale unknown. Same for all *_Std.";
+CM_ SG_ 784 MRR_Obj00_DistCorr "Probably a correlation term, ~30 for stationary in-path targets. Same for VrelCorr/ArelCorr.";
+CM_ SG_ 784 MRR_Obj00_DynProp "Observed: 5 = stationary (ego moving), 2 = stationary/slow while ego stopped or reversing, 7 = mostly crossing/moving, 1/3/4/6 = moving, 8 = far/uncertain.";
+CM_ SG_ 784 MRR_Obj00_Heading "Over-ground heading, clockwise positive, raw 128 = parallel to ego (fit corr 0.997 vs velocity direction). 127 = default for unclassified tracks, 255 = n/a.";
+CM_ SG_ 784 MRR_Obj00_Unk_B28 "127 for unclassified tracks, 0/255 or 40-125 for classified ones; maybe heading quality.";
+CM_ SG_ 784 MRR_Obj00_Width "Tentative 0.2 m: crossing car 10-13 (2.0-2.6 m), pedestrian 4 (0.8 m). 0 for unclassified tracks.";
+CM_ SG_ 784 MRR_Obj00_Length "Tentative 0.2 m: crossing car grows 8->24 (1.6->4.8 m) as more is seen, pedestrian 2 (0.4 m).";
+CM_ SG_ 784 MRR_Obj00_Class "Observed: 0 = unclassified point target, 1 = car-sized, 6 = pedestrian-sized, 8 = small object (0.4-1.2 m), 3/5 rare.";
+CM_ SG_ 784 MRR_Obj00_Status "Bitfield-like: 1 and 4 on unclassified tracks, 12 on classified ones, others rare.";
+CM_ SG_ 784 MRR_Obj00_Unk_B35 "Constant 0x0A70 (bytes 35-36 read 0x29C3 / 0xA9C3 including neighbors).";
+CM_ BO_ 1024 "Radar ego-motion state, one per radar cycle. No E2E (bytes 0-2 = 0). Fields are offset-binary around mid-scale. Scales are fits against 0x200.";
+CM_ SG_ 1024 MRR_EgoSpeed "Signed (negative in reverse). Fit 0.003044; 100/32767 assumed.";
+CM_ SG_ 1024 MRR_EgoYawRate "Positive = clockwise (right), radar frame. Fit 0.1837 deg/s/bit.";
+CM_ SG_ 1024 MRR_EgoYawRateFine "Positive = clockwise. Fit 0.02204 deg/s/bit (corr 0.996).";
+CM_ SG_ 1024 MRR_EgoCurvature "Positive = right. Saturates at +/-8191 raw (radius < ~10 m) in tight low-speed turns.";
+CM_ SG_ 1024 MRR_EgoCurvState "2 = straight, 1 = turning, 0 = tight turn (curvature saturated).";
+CM_ SG_ 1024 MRR_Ego_Unk_B9 "Constant 0x7FFF (mid-scale / unused).";
+CM_ BO_ 1025 "20 bytes, one per radar cycle, all zero in this log.";
+CM_ BO_ 1026 "One per radar cycle, no E2E. Otherwise constant: 00 00 00 03 00 xx ... 00 01 00 01 ... yy ... 01 at byte 43.";
+CM_ SG_ 1026 MRR_402_B5 "Varies 5-43 and rises with speed (r=0.61). Maybe a raw detection count.";
+CM_ SG_ 1026 MRR_402_B19 "Rises slowly 27 -> 35 over the minute. Looks like a temperature.";
+CM_ BO_ 1280 "One per radar cycle, E2E DataID 52. Timestamp = MRR_MeasTime of the same cycle (1/4096 s). Bytes 7-12 / 13-18 / 19-28 / 29-34 / 35-39 are blocks that sit at fixed fill patterns (7FBFF83F79FB, FFFFFBFFFFF8, 00000003FDFFC1FBCFDF, FFFFDFFFFFC0, 0000000000) when invalid and get filled in ~30-43% of cycles. Not decoded. Their contents do not copy any object-slot field.";
+CM_ BO_ 1536 "1 Hz, E2E DataID 51 (radar DataID range). Payload constant 00 78 FD 80 44 04 58 01 64 80 41 50 AF FF E8 00 00 00. Probably mounting/calibration/version data.";
+BA_DEF_ BO_  "VFrameFormat" ENUM  "StandardCAN","ExtendedCAN","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","StandardCAN_FD","ExtendedCAN_FD";
+BA_DEF_ BO_  "GenMsgCycleTime" INT 0 10000;
+BA_DEF_DEF_  "VFrameFormat" "StandardCAN_FD";
+BA_DEF_DEF_  "GenMsgCycleTime" 0;
+BA_ "GenMsgCycleTime" BO_ 256 50;
+BA_ "GenMsgCycleTime" BO_ 512 10;
+BA_ "GenMsgCycleTime" BO_ 513 20;
+BA_ "GenMsgCycleTime" BO_ 514 1000;
+BA_ "GenMsgCycleTime" BO_ 768 65;
+BA_ "GenMsgCycleTime" BO_ 769 20;
+BA_ "GenMsgCycleTime" BO_ 784 65;
+BA_ "GenMsgCycleTime" BO_ 785 65;
+BA_ "GenMsgCycleTime" BO_ 786 65;
+BA_ "GenMsgCycleTime" BO_ 787 65;
+BA_ "GenMsgCycleTime" BO_ 788 65;
+BA_ "GenMsgCycleTime" BO_ 789 65;
+BA_ "GenMsgCycleTime" BO_ 790 65;
+BA_ "GenMsgCycleTime" BO_ 791 65;
+BA_ "GenMsgCycleTime" BO_ 792 65;
+BA_ "GenMsgCycleTime" BO_ 793 65;
+BA_ "GenMsgCycleTime" BO_ 794 65;
+BA_ "GenMsgCycleTime" BO_ 795 65;
+BA_ "GenMsgCycleTime" BO_ 796 65;
+BA_ "GenMsgCycleTime" BO_ 797 65;
+BA_ "GenMsgCycleTime" BO_ 798 65;
+BA_ "GenMsgCycleTime" BO_ 799 65;
+BA_ "GenMsgCycleTime" BO_ 800 65;
+BA_ "GenMsgCycleTime" BO_ 801 65;
+BA_ "GenMsgCycleTime" BO_ 802 65;
+BA_ "GenMsgCycleTime" BO_ 803 65;
+BA_ "GenMsgCycleTime" BO_ 804 65;
+BA_ "GenMsgCycleTime" BO_ 805 65;
+BA_ "GenMsgCycleTime" BO_ 806 65;
+BA_ "GenMsgCycleTime" BO_ 807 65;
+BA_ "GenMsgCycleTime" BO_ 808 65;
+BA_ "GenMsgCycleTime" BO_ 809 65;
+BA_ "GenMsgCycleTime" BO_ 810 65;
+BA_ "GenMsgCycleTime" BO_ 811 65;
+BA_ "GenMsgCycleTime" BO_ 812 65;
+BA_ "GenMsgCycleTime" BO_ 813 65;
+BA_ "GenMsgCycleTime" BO_ 814 65;
+BA_ "GenMsgCycleTime" BO_ 815 65;
+BA_ "GenMsgCycleTime" BO_ 1024 65;
+BA_ "GenMsgCycleTime" BO_ 1025 65;
+BA_ "GenMsgCycleTime" BO_ 1026 65;
+BA_ "GenMsgCycleTime" BO_ 1280 65;
+BA_ "GenMsgCycleTime" BO_ 1536 1000;
+
+VAL_ 256 TSyn_Type 32 "SYNC_CRC" 40 "FUP_CRC" ;
+VAL_ 512 ADAS_MRR_DrvDir 0 "Standstill" 1 "Forward" 2 "Reverse" ;
+VAL_ 513 ADAS_MRR_WhlDir_FL 1 "Forward" 2 "Reverse" 3 "Standstill" ;
+VAL_ 513 ADAS_MRR_WhlDir_FR 1 "Forward" 2 "Reverse" 3 "Standstill" ;
+VAL_ 513 ADAS_MRR_WhlDir_RL 1 "Forward" 2 "Reverse" 3 "Standstill" ;
+VAL_ 513 ADAS_MRR_WhlDir_RR 1 "Forward" 2 "Reverse" 3 "Standstill" ;

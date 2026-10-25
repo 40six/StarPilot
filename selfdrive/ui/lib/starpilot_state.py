@@ -21,6 +21,7 @@ class StarPilotCarState:
     isToyota: bool = False
     isSubaru: bool = False
     isTesla: bool = False
+    isFisker: bool = False
     isVolt: bool = False
     isBolt: bool = False
     isAngleCar: bool = False
@@ -97,6 +98,7 @@ class StarPilotState:
             self.car_state.isJeep = brand == "chrysler" and fallback_model_str.startswith("JEEP_")
             self.car_state.isSubaru = brand == "subaru"
             self.car_state.isTesla = brand == "tesla"
+            self.car_state.isFisker = brand == "fisker"
             self.car_state.isToyota = brand == "toyota"
             self.car_state.isHKGCanFd = False
             self.car_state.hasModeStarButtons = False
@@ -173,6 +175,7 @@ class StarPilotState:
             self.car_state.isJeep = car_make == "chrysler" and car_fingerprint.startswith("JEEP_")
             self.car_state.isSubaru = car_make == "subaru"
             self.car_state.isTesla = car_make == "tesla"
+            self.car_state.isFisker = car_make == "fisker"
             self.car_state.isToyota = car_make == "toyota"
             self.car_state.isTSK = bool(self._safe_get(CP, "secOcRequired", False))
             self.car_state.isVolt = car_fingerprint.startswith("CHEVROLET_VOLT")
@@ -182,6 +185,7 @@ class StarPilotState:
             self.car_state.lkasAllowedForAOL = (
                 (car_make == "hyundai" and (bool(cp_flags & HyundaiFlags.CANFD) or starpilot_toggles.get("lkas_allowed_for_aol", False))) or
                 car_make == "honda" or
+                car_make == "fisker" or
                 (car_make == "toyota" and car_fingerprint in TSS2_CAR)
             )
             self.car_state.longitudinalActuatorDelay = float(self._safe_get(CP, "longitudinalActuatorDelay", self.car_state.longitudinalActuatorDelay))

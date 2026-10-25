@@ -38,7 +38,8 @@ BRAND_EXTRA_GEARS = {
   'toyota': [GearShifter.sport],
   'gm': [GearShifter.sport, GearShifter.low, GearShifter.eco, GearShifter.manumatic],
   'volkswagen': [GearShifter.eco, GearShifter.sport, GearShifter.manumatic],
-  'hyundai': [GearShifter.sport, GearShifter.manumatic]
+  'hyundai': [GearShifter.sport, GearShifter.manumatic],
+  'fisker': [GearShifter.eco, GearShifter.sport],  # VCU_GearSig 6/7 (E/S)
 }
 
 GM_STANDSTILL_BRAKE_CAMERA_CARS = {

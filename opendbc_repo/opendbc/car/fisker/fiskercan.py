@@ -1,0 +1,386 @@
+"""
+CAN packing helpers for Fisker Ocean.
+
+Plain 8-bit `*_CheckSum` algorithm:
+
+    CRC-8 (poly=0x1D / SAE-J1850, init=0x00, xorout=0x00)
+    input = [DataID_byte] || bytes[1 : DataLength/8]
+
+  - DataID_byte is the per-message data identifier (see E2E_PARAMS).
+  - DataLength (bits) is the covered payload length — 64 for normal messages,
+    32 for SecOC-protected messages (which excludes the SecOC tail from the CRC).
+
+Ocean's E2E flavour: SAE-J1850 polynomial with init/xorout stripped to 0 —
+NOT the standard AUTOSAR E2E Profile 1 which uses 0xFF/0xFF.
+
+SecOC stamping is performed in carcontroller.py after CAN packing — see
+opendbc.car.fisker.secoc.stamp_secoc.
+"""
+
+from opendbc.can import CANPacker
+from opendbc.car.fisker.values import CANBUS, ICC_0x35B_OVERRIDES, ICC_0x52A_OVERRIDES
+
+# Per-address (data_id, length_bits) pair used by the plain-CRC checksum below.
+E2E_PARAMS: dict[int, tuple[int, int]] = {
+  0x115: (138, 64),   # ESP wheel speeds F
+  0x116: (159, 64),   # ESP wheel speeds R
+  0x117: (72, 64),    # ADAS long-control status
+  0x118: (81, 64),    # ADAS long/ESP handshake
+  0x119: (164, 64),   # iBooster
+  0x121: (23, 32),    # ADAS accel command (SecOC)
+  0x1C0: (195, 64),   # ADAS lateral-control activation/status
+  0x1D0: (16, 32),    # ADAS steering command (SecOC)
+  0x317: (205, 64),   # ADAS chime / takeover
+  0x318: (121, 64),   # ESP vehicle speed
+  0x31A: (55, 64),    # ADAS AEB / telltale
+  0x52A: (0xF5, 64),  # ICC feature settings (plain E2E, DataID 0xF5) — checksum regression only;
+                      # the live spoof patches the checksum via XOR delta (fisker_icc_checksum_delta)
+  0x1C2: (0x90, 64),  # EPS lateral status (verified 2026-10-10 by brute-forcing 200
+                      # captured frames; CRC-8 J1850 with data_id=0x90 is the ONLY
+                      # match in the shared family)
+}
+
+
+def fisker_plain_checksum(addr: int, data: bytes) -> int:
+  """
+  Fisker Ocean plain 8-bit CheckSum.
+  data must be the 8-byte frame with byte[0] (the checksum position) already
+  zero. Returns the 8-bit CRC to write into byte[0].
+  """
+  data_id, data_len_bits = E2E_PARAMS[addr]
+  n_bytes = data_len_bits // 8
+  crc_input = bytes([data_id]) + data[1:n_bytes]
+  return _crc8_j1850(crc_input)
+
+
+def _crc8_j1850(buf: bytes) -> int:
+  """SAE-J1850 CRC-8 (poly=0x1D, init=0, xorout=0), reflected form matching
+  fisker_plain_checksum's inner loop. Broken out for the ICC spoof helpers so
+  they can compute checksum deltas without needing the per-address data_id."""
+  crc = 0
+  for b in buf:
+    crc ^= b
+    for _ in range(8):
+      crc = ((crc << 1) ^ 0x1D) & 0xFF if crc & 0x80 else (crc << 1) & 0xFF
+  return crc
+
+
+def fisker_icc_checksum_delta(byte_diff: bytes) -> int:
+  """
+  Return the XOR delta to apply to ICC's 8-bit CheckSum byte after mutating the
+  payload of an ICC-authored message.
+
+  Reasoning: the CheckSum is CRC-8 J1850 with init=0, xorout=0 over
+  [DataID] || payload[1:8]. That CRC is linear over GF(2):
+      crc(A XOR B) = crc(A) XOR crc(B)
+  So for a payload change P_orig -> P_new (both 8 bytes),
+      new_chk = old_chk XOR crc([0] || (P_orig XOR P_new)[1:8])
+  and we never need to know DataID.
+
+  `byte_diff` MUST be 8 bytes long and byte_diff[0] MUST be 0 (the checksum
+  position — its "delta" is exactly what we're computing, so it can't be an
+  input). Non-zero bytes at positions 1..7 are XOR'd into the CRC.
+  """
+  assert len(byte_diff) == 8 and byte_diff[0] == 0
+  return _crc8_j1850(byte_diff)
+
+
+class FiskerCAN:
+  def __init__(self, CP, packer: CANPacker):
+    self.CP = CP
+    self.packer = packer
+
+  # ---- ADASBUS (Bus.pt) — actuator commands and status -------------------
+
+  def create_steering_control(self, angle_deg: float, counter: int):
+    """ADAS_0x1D0 — steering angle request. 0x1D0 has NO active/enable bit (the EPS gates
+    actuation entirely on 0x1C0's Req/Sts). `angle_deg` should be the commanded angle
+    while lat_active, or the mirrored measured angle when the driver is overriding —
+    apply_std_steer_angle_limits already produces the right value. E2E checksum on byte0;
+    SecOC tail stamped later."""
+    values = {
+      "ADAS_LatCtrl_SteerAnReq": angle_deg,
+      "ADAS_1D0_AliveCounter": counter & 0xF,
+      "ADAS_1D0_CheckSum": 0,   # filled below (SecOC tail zeroed until stamped)
+    }
+    addr, data, bus = self.packer.make_can_msg("ADAS_0x1D0", CANBUS.pt, values)
+    chk = fisker_plain_checksum(addr, data)
+    return addr, bytes([chk]) + data[1:], bus
+
+  def create_lat_control(self, lat_active: bool, counter: int, driver_override: bool = False,
+                         lat_ctrl_typ: int = 1, lat_engaged: bool | None = None):
+    """ADAS_0x1C0 — lateral-control activation/status, 10 ms cycle (plain E2E checksum,
+    no SecOC).
+
+    Two independent bits here:
+      * `lat_engaged` — are we in an engaged lateral session (MADS armed, SecOC up,
+        the whole 0x1D0/0x1C0 stream flowing)? Drives Sts/StsVld/Typ/ReqVld.
+      * `lat_active`  — on *this* tick, are we actively servoing an angle (True), or
+        backing off because the driver has their hand on the wheel (False)? Drives Req only.
+
+    Only Req changes on driver-override transitions. The EPS wants a stable
+    "we're still engaged" signal (Sts=Active, Typ=LKA, StsVld=Valid) while Req
+    toggles 1↔0; it treats a sudden Sts=Active→Inactive (with Typ dropping
+    from LKA→Not_active) as a protocol violation and raises abort=8 (CAN) /
+    state=3 (Failure). Observed on-vehicle 2026-10-18: within ~100 ms of a
+    clean engage, the first driver-torque pulse flipped MADS to `overriding`
+    → carControl.latActive=False → old code slammed all three to 0 → EPS fault.
+
+    For backwards-compat, `lat_engaged=None` falls back to `lat_active` (old behaviour).
+
+    ADAS_LatCtrl_Typ selects the lateral-control type the EPS runs. DBC values:
+      1=LKA_angle_request (default — the Ocean's EPS historically only honours this)
+      2=ELKA_angle_request
+      3=LCA_or_TJA_angle_request (sunnypilot FiskerLateralType toggle = LCA/TJA)
+      4..7 other modes we don't support
+    The sunnypilot UI exposes a toggle for 1 vs 3; other values aren't reachable from
+    carcontroller. If 3 fails on-vehicle (EPS rejects the Typ), flipping back to the
+    default toggle setting restores LKA without a code change.
+
+    ADAS_LatCtrl_DrvrOvrd is a diagnostic bit the ADAS sends to the Gateway only (DBC
+    receiver list = GW). The EPS does NOT read it; it uses its own driver-torque sensor
+    (EPS_DrvrSteerTq/EPS_DrvrIntvSteerWhlDetd on 0x1C4). Setting DrvrOvrd here is purely
+    informational for the GW log."""
+    if lat_engaged is None:
+      lat_engaged = lat_active
+    values = {
+      "ADAS_LatCtrl_Sts": 1 if lat_engaged else 0,              # 0=Inactive 1=Active (engaged session)
+      "ADAS_LatCtrl_StsVld": 1,                                  # 1=Valid
+      "ADAS_LatCtrl_DrvrOvrd": 1 if driver_override else 0,      # GW-only diagnostic
+      "ADAS_LatCtrl_DrvrOvrdVld": 1,                             # 1=Valid
+      "ADAS_LatCtrl_Typ": lat_ctrl_typ if lat_engaged else 0,    # 1=LKA, 3=LCA_or_TJA, 0=Not_active
+      "ADAS_LatCtrl_ReqVld": 1 if lat_engaged else 0,            # Req is "valid to interpret" as long as we're engaged
+      "ADAS_LatCtrl_Req": 1 if lat_active else 0,                # 1=Angle_request_active -> EPS servoes
+      "ADAS_1C0_AliveCounter": counter & 0xF,
+      "ADAS_1C0_CheckSum": 0,   # filled below
+    }
+    addr, data, bus = self.packer.make_can_msg("ADAS_0x1C0", CANBUS.pt, values)
+    chk = fisker_plain_checksum(addr, data)
+    return addr, bytes([chk]) + data[1:], bus
+
+  def create_accel_command(self, accel: float, accel_active: bool, counter: int):
+    """ADAS_0x121 — longitudinal accel request, 10 ms cycle. SecOC-protected.
+    `accel_active` gates the wire-level Vld — 1(Valid) while we're actually commanding,
+    0(Initializing) otherwise so the VCU ignores the request while we're disengaged/idle.
+    Callers should pass accel=0.0 during driver gas override (we still send Vld=1 to keep
+    a valid heartbeat, but request zero acceleration so the VCU can arbitrate the pedal)."""
+    values = {
+      "ADAS_LgtCtrl_AccelReq": accel,
+      "ADAS_LgtCtrl_AccelVld": 1 if accel_active else 0,
+      "ADAS_121_AliveCounter": counter & 0xF,
+      "ADAS_121_CheckSum": 0,   # filled in below
+    }
+    addr, data, bus = self.packer.make_can_msg("ADAS_0x121", CANBUS.pt, values)
+    chk = fisker_plain_checksum(addr, data)
+    data = bytes([chk]) + data[1:]
+    return addr, data, bus
+
+  def create_long_status(self, long_active: bool, drvr_override: bool,
+                         gear_req: int, counter: int):
+    """ADAS_0x117 — long-control status + parking gear request, 10 ms cycle (plain E2E).
+
+    The VCU only applies a NEGATIVE ADAS_LgtCtrl_AccelReq (on 0x121) when ALL of these
+    conditions hold simultaneously:
+      - ADAS_LgtCtrl_Sts      = 3 (Active)
+      - ADAS_LgtCtrl_StsVld   = 1 (Valid)
+      - ADAS_LgtCtrl_Typ      = TJA/ICA (= value 2, ACC_Stop_and_Go — the only Typ that
+                                is a superset of plain ACC with stop-and-go capability)
+      - ADAS_LgtCtrl_AccelVld = 1 (Valid, on 0x121)
+      - ADAS_LgtCtrl_AccelReq within the accepted range (deeper decel gets clamped)
+
+    On-vehicle testing with Typ=1 (plain ACC) confirmed the VCU accepted the POSITIVE
+    portion of AccelReq (motor torque add) but silently ignored negatives — the wrong
+    Typ blocks the decel path.
+
+    ADAS_ISA_CutOffReq is left at 0 here.  It's the entry point of a different mechanism
+    (Speed Limit control via ISA subsystem), not the ACC path.
+
+    All Vld fields default to 1 (Valid) so the ESP does not treat us as an uninitialized
+    module."""
+    values = {
+      "ADAS_LgtCtrl_Sts": 3 if long_active else 0,        # 3=Active, 0=Off
+      "ADAS_LgtCtrl_StsVld": 1,                            # 1=Valid
+      "ADAS_LgtCtrl_DrvrOvrdSts": int(drvr_override),
+      "ADAS_LgtCtrl_DrvrOvrdVld": 1,                       # 1=Valid
+      "ADAS_LgtCtrl_Typ": 2 if long_active else 0,         # 2=ACC_Stop_and_Go (=TJA/ICA)
+      "ADAS_ISA_CutOffReq": 0,                             # ISA mechanism, not ACC path
+      "ADAS_ISA_CutOffReqVld": 1,                          # 1=Valid
+      "ADAS_HAP_EmgyStandstillReq": 0,                     # no emergency standstill
+      "ADAS_HAP_EmgyStandstillVld": 1,                     # value is valid (=No_request)
+      "ADAS_HAP_EmgyEPBVld": 1,
+      "ADAS_ParkStandstillReq": 0,
+      "ADAS_ParkStandstillVld": 1,
+      "ADAS_ParkGearReq": gear_req & 0xF,
+      "ADAS_ParkGearReqVld": 1,
+      "ADAS_117_AliveCounter": counter & 0xF,
+      "ADAS_117_CheckSum": 0,
+    }
+    addr, data, bus = self.packer.make_can_msg("ADAS_0x117", CANBUS.pt, values)
+    chk = fisker_plain_checksum(addr, data)
+    return addr, bytes([chk]) + data[1:], bus
+
+  def create_long_esp_handshake(self, long_active: bool, drvr_override: bool, counter: int):
+    """ADAS_0x118 — ESP/long handshake, 10 ms cycle (plain E2E).
+    Same Sts=3(Active) fix as 0x117 (was 1=Reserved). All Vld fields set to 1(Valid) so
+    the ESP considers each optional request signal explicitly present as No_request rather
+    than 'value uninitialized, ignore me'. Braking authorization on this trim is done
+    entirely VCU-side (motor torque cut via ADAS_ISA_CutOffReq on 0x117); we intentionally
+    do NOT assert JerkReq / BrkPrefillReq / HBAReq / AEB here to keep hydraulic brakes out
+    of the loop."""
+    values = {
+      "ADAS_LgtCtrl_ESP_Sts": 3 if long_active else 0,     # 3=Active, 0=Off
+      "ADAS_LgtCtrl_ESP_Vld": 1,                            # 1=Valid
+      "ADAS_ESP_DrvrOvrdSts": int(drvr_override),
+      "ADAS_ESP_DrvrOvrdVld": 1,
+      "ADAS_HBAReq": 0,                                     # no HBA request
+      "ADAS_HBAVld": 1,
+      "ADAS_ESP_StandstillReq": 0,
+      "ADAS_ESP_StandstillVld": 1,
+      "ADAS_JerkReq": 0,                                    # no ESP-side brake authorization
+      "ADAS_JerkReqVld": 1,
+      "ADAS_BrkPrefillReq": 0,                              # no hydraulic-brake prefill
+      "ADAS_BrkPrefillVld": 1,
+      "ADAS_AEB_ActvTyp": 0,                                # no AEB active
+      "ADAS_AEB_DecelVld": 1,
+      "ADAS_118_AliveCounter": counter & 0xF,
+      "ADAS_118_CheckSum": 0,
+    }
+    addr, data, bus = self.packer.make_can_msg("ADAS_0x118", CANBUS.pt, values)
+    chk = fisker_plain_checksum(addr, data)
+    return addr, bytes([chk]) + data[1:], bus
+
+  def create_icc_0x35b(self, icc_values: dict[str, float]):
+    """ICC_0x35B — SVS view requests + BSD/DOW/APA/park-assist settings, re-sent to the ADAS
+    module (bus 2) with ICC_0x35B_OVERRIDES applied. `icc_values` is one decoded ICC frame from
+    bus 0; every other signal (incl. the ICC_0x35B_PASSTHROUGH camera-view requests) is copied
+    from it. No E2E on this message."""
+    values = {**icc_values, **ICC_0x35B_OVERRIDES}
+    return self.packer.make_can_msg("ICC_0x35B", CANBUS.cam, values)
+
+  def create_acc_hud(self, set_speed_kph: float, gap_setting: int, icon: int, counter: int):
+    """ADAS_0x31C — ACC display injection (target speed, gap, icon)."""
+    values = {
+      "ADAS_AccTrgSpdDisp": float(set_speed_kph),
+      "ADAS_TiGapSet_ACC": gap_setting & 0x7,
+      "ADAS_ACCIconDisp": icon & 0x7,
+      "ADAS_DispSpdUnit_ACC": 0,    # 0 = km/h
+    }
+    return self.packer.make_can_msg("ADAS_0x31C", CANBUS.pt, values)
+
+  def create_warning_hud(self, chime: int, takeover: int, counter: int):
+    """ADAS_0x317 — chimes / driver-takeover requests."""
+    values = {
+      "ADAS_ChimeReq": chime & 0x7,
+      "ADAS_DrvrTakeOvrReq": takeover & 0x3,
+    }
+    return self.packer.make_can_msg("ADAS_0x317", CANBUS.pt, values)
+
+  # ---- ICC spoof (bus 2, replaces the OEM ICC 0x52A when engaged) ---------
+
+  def create_icc_spoof_0x52a(self, icc_values: dict, acc_auto_speed: bool = True,
+                             terrain_setting: bool = False, overrides: dict | None = None):
+    """Repack ICC_0x52A on the cam-side bus with the ACC settings overridden so the
+    ADAS module enters ACC mode. OEM only sets some of these to something other
+    than Off, and without ICC_ACCSwt=On the ADAS module stays at ACC_Off no matter
+    what the type field says — forcing the byte-4 fields together is what enables
+    ACC via the ICC spoof path.
+
+    `icc_values` is a snapshot of every ICC_0x52A signal (see
+    fisker.carstate.ICC_0x52A_SIGNALS) captured on bus 0. Every signal not
+    overridden — including the OEM CheckSum, AliveCounter, and reserved bits — is
+    passed through untouched, so the spoofed frame is byte-identical to what ICC
+    just sent except for the overridden bits, plus the one-byte CheckSum fix-up.
+    The CheckSum is adjusted via a CRC-8 XOR delta (see fisker_icc_checksum_delta)
+    so we don't need to know 0x52A's per-message DataID.
+
+    What's overridden, in order (later wins):
+      ICCACCAutoSpdSts      = acc_auto_speed  ← FiskerACCAutoSpeed param (default On)
+      ICCACCTerrainSetting  = terrain_setting ← FiskerACCTerrain param (default Off)
+      `overrides`, default values.ICC_0x52A_OVERRIDES (edited live from the web HUD)
+
+    With the code defaults byte 4 (Motorola, MSB first, matches the DBC) is fully
+    determined, nothing from OEM's byte 4 is preserved:
+      bits 39..37 (3) ICCACCFuncTyp            = 2 (Advanced/type-2 ACC)
+      bit 36      (1) ICCACCSpdStepSize        = 1 (Step_5_unit)
+      bit 35      (1) ICCACCAutoSpdSts         = acc_auto_speed (1=On, 0=Off)
+      bits 34..33 (2) ICCACCSwt                = 1 (On) — ACC master switch
+      bit 32      (1) ICCLaneTrajectorySetting = 1 (On)
+      0x5B (acc_auto_speed=True)  = all five set to the "on" values above
+      0x53 (acc_auto_speed=False) = 0x5B & ~0x08 (bit 35 cleared)
+    and of byte 6 only bit 0 (ICCACCTerrainSetting) is set; TiGapCfm, ISASetting
+    and the reserved bits pass through. The speed-limit offset and its type
+    (byte 5) pass through unless overridden.
+
+    Bus routing: sent on CANBUS.cam (bus 2, ADAS side). Panda's fisker_fwd_hook
+    blocks OEM's bus-0 → bus-2 forwarding of 0x52A whenever openpilot has recently
+    emitted its own copy (time-gated, not controls_allowed-gated — ADAS needs the
+    spoofed settings before cruise can engage at all)."""
+    ADDR = 0x52A
+    # Round-trip through the packer to lay out every bit at OEM's values. CANPacker
+    # doesn't treat "*CheckSum" as anything special — it just packs the numeric
+    # value — so OEM's CheckSum byte lands in byte 0, which we then patch via the
+    # CRC delta once the override bytes are replaced.
+    addr, orig, _ = self.packer.make_can_msg("ICC_0x52A", CANBUS.pt, icc_values)
+    assert addr == ADDR
+
+    ov = ICC_0x52A_OVERRIDES if overrides is None else overrides
+    values = {**icc_values, "ICCACCAutoSpdSts": int(acc_auto_speed), "ICCACCTerrainSetting": int(terrain_setting), **ov}
+    # the E2E fields are always the ICC's: the CheckSum is patched below, the counter is what ADAS checks
+    values["ICC_0x52ACheckSum"] = icc_values["ICC_0x52ACheckSum"]
+    values["ICC_0x52AAliveCounter"] = icc_values["ICC_0x52AAliveCounter"]
+    _, new, _ = self.packer.make_can_msg("ICC_0x52A", CANBUS.pt, values)
+
+    diff = bytearray(a ^ b for a, b in zip(orig, new, strict=True))
+    diff[0] = 0
+    data = orig
+    if any(diff):
+      out = bytearray(new)
+      out[0] = orig[0] ^ fisker_icc_checksum_delta(bytes(diff))
+      data = bytes(out)
+
+    return ADDR, data, CANBUS.cam
+
+  def create_eps_spoof_0x1c2(self, eps_values: dict):
+    """Repack EPS_0x1C2 on the cam-side bus (toward the OEM ADAS module) with
+    EPS_AdasLatCtrlSts forced to 1 (Available_For_Control). This hides from the
+    ADAS module that another controller (us) is actively driving the EPS.
+
+    Context: the OEM ADAS cross-references its own ADAS_LatCtrl_Req against
+    EPS_AdasLatCtrlSts. During our MADS engagement we send ADAS_LatCtrl_Req=1
+    directly to the EPS on bus 0 and block the OEM's ADAS_LatCtrl_Req=0 from
+    reaching the EPS (fwd_hook). The EPS, under our control, reports
+    AdasLatCtrlSts=Active(2). But the OEM ADAS still sees its OWN state as
+    Req=0 — and now also sees EPS=Active via the forwarded 0x1C2. That
+    mismatch trips an internal consistency check: "I didn't ask for lateral,
+    why is EPS Active?" → raises "LKA not available" on the cluster for 1-2 s
+    on engagement, and again on disengage when EPS falls back to Available.
+
+    The fix: block the real EPS_0x1C2 on bus 0 → bus 2 while we're commanding
+    and send this spoofed copy instead. Only byte 6 bits 1..0 (AdasLatCtrlSts)
+    are overridden to 01 (Available); every other EPS reading — steer wheel
+    angle, torque, rotation, calibration, abort, validity bits — passes
+    through byte-identical. The CheckSum is adjusted via a CRC-8 XOR delta
+    (same math as the ICC spoof) so we don't need to know 0x1C2's data_id.
+
+    Bus routing: emitted on CANBUS.cam (bus 2, ADAS side). Panda's
+    fisker_fwd_hook blocks the OEM EPS_0x1C2 forwarding bus 0 → bus 2 while
+    we're actively TXing this spoof (time-based relay)."""
+    ADDR = 0x1C2
+    addr, data, _ = self.packer.make_can_msg("EPS_0x1C2", CANBUS.pt, eps_values)
+    assert addr == ADDR
+
+    orig_b6 = data[6]
+    # Force AdasLatCtrlSts (bits 1..0) to 01 = Available. Preserve the rest of
+    # byte 6 (AdasLatCtrlStsVld bits 3..2 and any high bits).
+    new_b6 = (orig_b6 & 0xFC) | 0x01
+
+    if new_b6 != orig_b6:
+      diff = bytearray(8)
+      diff[6] = orig_b6 ^ new_b6
+      delta_chk = fisker_icc_checksum_delta(bytes(diff))
+      out = bytearray(data)
+      out[0] ^= delta_chk
+      out[6] = new_b6
+      data = bytes(out)
+
+    return ADDR, data, CANBUS.cam

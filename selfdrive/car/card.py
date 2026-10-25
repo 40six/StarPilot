@@ -201,6 +201,19 @@ class Car:
         else:
           cloudlog.warning("Saved SecOC key is invalid")
 
+      # Fisker Ocean: with no stored key, read it once from the ADAS radar over UDS
+      # (DID 0xEFF5) while panda is still in the ELM327 diagnostic safety mode. The
+      # carcontroller still verifies it against the GW sync MAC before steering.
+      if not self.CP.secOcKeyAvailable and self.CP.brand == "fisker" and controller_available and not REPLAY:
+        from opendbc.car.fisker.secoc_key import recover_secoc_key
+        recovered_key = recover_secoc_key(*self.can_callbacks)
+        if recovered_key is not None and len(recovered_key) == 16:
+          self.CP.secOcKeyAvailable = True
+          self.CI.CS.secoc_key = recovered_key
+          self.CI.CC.secoc_key = recovered_key
+          self.params.put("SecOCKey", recovered_key.hex())
+          cloudlog.warning("Fisker SecOC key recovered from ADAS radar")
+
     if self.CP.secOcRequired and not self.CP.secOcKeyAvailable:
       self.CP.passive = True
       safety_config = structs.CarParams.SafetyConfig()
@@ -482,6 +495,9 @@ class Car:
         live_params = self.sm['liveParameters']
         self.CI.CC.update_live_params(live_params.roll, live_params.angleOffsetDeg,
                                       live_params.stiffnessFactor, live_params.steerRatio)
+      if self.CP.brand == "fisker":
+        # Fisker drives its lateral session off openpilot engagement OR Always On Lateral.
+        self.CI.CC.always_on_lateral_enabled = self.starpilot_card.always_on_lateral_enabled
       self.last_actuators_output, can_sends = self.CI.apply(CC, now_nanos, self.starpilot_toggles)
       get_steering_limit_info = getattr(self.CI.CC, "get_steering_limit_info", None)
       self.last_steering_limit_info = get_steering_limit_info() if get_steering_limit_info is not None else None

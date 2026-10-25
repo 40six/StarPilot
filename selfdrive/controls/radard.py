@@ -449,8 +449,9 @@ def get_adjacent_stopped(tracks: dict[int, Track], model_data: capnp._DynamicStr
 
 class RadarD:
   def __init__(self, radar_ts: float = DT_MDL, delay: float = 0.0, g90_radar_filter: bool = False,
-               honda_bosch_a_radar: bool = False):
+               honda_bosch_a_radar: bool = False, radar_low_speed_override: bool = True):
     self.current_time = 0.0
+    self.radar_low_speed_override = radar_low_speed_override
 
     self.tracks: dict[int, Track] = {}
     self.honda_bosch_a_radar = honda_bosch_a_radar
@@ -650,7 +651,10 @@ class RadarD:
         self._update_honda_bosch_a_preferred_staleness(i, leads_v3[i], self.lead_prob_filters[i].x)
 
       lead_one = get_lead(self.v_ego, self.ready, self.tracks, leads_v3[0], model_v_ego, sm['modelV2'],
-                          standstill, sm['starpilotPlan'], self.starpilot_toggles, low_speed_override=True,
+                          # the Fisker MRR has no elevation: overhead lights/gantries and curbs show as
+                          # in-lane stationary cars, so its leads need the model's confirmation
+                          standstill, sm['starpilotPlan'], self.starpilot_toggles,
+                          low_speed_override=self.radar_low_speed_override,
                           g90_radar_filter=self.g90_radar_filter, lead_prob=self.lead_prob_filters[0].x,
                           preferred_track_id=self.prev_lead_track_ids[0],
                           honda_bosch_a_radar=self.honda_bosch_a_radar)
@@ -721,7 +725,7 @@ def main() -> None:
   g90_radar_filter = CP.brand == "hyundai" and CP.carFingerprint == "GENESIS_G90"
   honda_bosch_a_radar = is_bosch_a_radar_car(CP)
   RD = RadarD(radar_ts=radar_ts, delay=CP.radarDelay, g90_radar_filter=g90_radar_filter,
-              honda_bosch_a_radar=honda_bosch_a_radar)
+              honda_bosch_a_radar=honda_bosch_a_radar, radar_low_speed_override=CP.brand != "fisker")
 
   sm = sm.extend(['starpilotPlan'])
   pm = pm.extend(['starpilotRadarState'])

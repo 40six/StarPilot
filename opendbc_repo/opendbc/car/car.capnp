@@ -646,6 +646,9 @@ struct CarParams {
     volkswagenMeb @34;
     teslaPreAP @35;
     volvo @36;
+    bmwReserved @37;   # reserved: upstream opendbc bmw
+    mgReserved @38;    # reserved: upstream opendbc mg
+    fisker @39;
   }
 
   enum SteerControlType {

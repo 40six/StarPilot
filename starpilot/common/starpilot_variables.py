@@ -90,7 +90,7 @@ def _lkas_allowed_for_aol(car_make, cp_flags, fpcp_safety_configs) -> bool:
   hyundai_can_use_lkas_for_aol = car_make == "hyundai" and (
     bool(cp_flags & HyundaiFlags.CANFD) or hyundai_has_lda_button
   )
-  return hyundai_can_use_lkas_for_aol or car_make in ("ford", "honda")
+  return hyundai_can_use_lkas_for_aol or car_make in ("ford", "honda", "fisker")
 
 
 def _main_cruise_aol_allowed(button_control: float) -> bool:
@@ -1645,7 +1645,7 @@ class StarPilotVariables:
       "GMDashSpoofOffsets",
       condition=toggle.car_make == "gm" and toggle.has_pedal,
     )
-    toggle.ignore_ignition_line = self.get_value("IgnoreIgnitionLine", condition=toggle.car_make == "gm")
+    toggle.ignore_ignition_line = self.get_value("IgnoreIgnitionLine", condition=toggle.car_make in ("gm", "fisker"))
     toggle.hkg_remote_start_boots_comma = self.get_value(
       "HKGRemoteStartBootsComma",
       condition=toggle.car_make == "hyundai" and toggle.openpilot_longitudinal and bool(CP.flags & HyundaiFlags.CANFD),

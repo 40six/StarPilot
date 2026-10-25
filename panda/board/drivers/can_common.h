@@ -214,6 +214,23 @@ void ignition_can_hook(CANPacket_t *msg) {
       prev_counter_rivian = counter;
     }
 
+    // Fisker Ocean exception
+    // The Ocean has no usable switched-12V ignition on the harness, so ignition comes from
+    // the BCM power mode: BCM_0x333.BCM_PwrMod (21|3 -> data[2] bits 5..3) == 4 (Run).
+    // 0x333 is a steady 20 Hz frame. Ford also uses 0x333 (Pass_Dr_Stat_FD1), so only
+    // trust it when the Fisker E2E AliveCounter (11|4 -> data[1] bits 3..0, 0..14) steps by
+    // exactly one frame-to-frame, the same guard Rivian/Tesla use against address overlap.
+    if ((msg->addr == 0x333U) && (len == 8)) {
+      int counter = msg->data[1] & 0xFU;
+
+      static int prev_counter_fisker = -1;
+      if ((counter == ((prev_counter_fisker + 1) % 15)) && (prev_counter_fisker != -1)) {
+        ignition_can = ((msg->data[2] >> 3) & 0x07U) == 4U;  // BCM_PwrMod: 4 = Run
+        ignition_can_cnt = 0U;
+      }
+      prev_counter_fisker = (counter <= 14) ? counter : -1;
+    }
+
     // Tesla Model 3/Y exception
     if ((msg->addr == 0x221U) && (len == 8)) {
       // 0x221 overlaps with Rivian which has random data on byte 0

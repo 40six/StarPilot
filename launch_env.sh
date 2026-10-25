@@ -30,6 +30,11 @@ fi
 
 export STAGING_ROOT="/data/safe_staging"
 
+# Fisker Ocean fork: FW_VERSIONS is intentionally empty (single-model port, CAN fingerprint
+# is authoritative) and FW_QUERY_CONFIG has zero requests. Skip the VIN/FW query at
+# launch so card comes up promptly on every launch route.
+export SKIP_FW_QUERY=1
+
 # StarPilot variables (only available after StarPilot is installed to /data/openpilot)
 if [ -x /data/openpilot/starpilot/system/environment_variables ]; then
   eval "$(/data/openpilot/starpilot/system/environment_variables)"

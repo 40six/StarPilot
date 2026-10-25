@@ -15,6 +15,7 @@ FINGERPRINT_MAKE_TO_VALUES_DIR = {
   "chrysler": "chrysler",
   "cupra": "volkswagen",
   "dodge": "chrysler",
+  "fisker": "fisker",
   "ford": "ford",
   "genesis": "hyundai",
   "gmc": "gm",

@@ -336,7 +336,8 @@ def get_dtc_status_names(status):
 
 class CanClient:
   def __init__(self, can_send: Callable[[int, bytes, int], None], can_recv: Callable[[], list[tuple[int, bytes, int]]],
-               tx_addr: int, rx_addr: int, bus: int, sub_addr: int | None = None, rx_sub_addr: int | None = None):
+               tx_addr: int, rx_addr: int, bus: int, sub_addr: int | None = None, rx_sub_addr: int | None = None, log_data: bool = True):
+    self.log_data = log_data
     self.tx = can_send
     self.rx = can_recv
     self.tx_addr = tx_addr
@@ -374,7 +375,8 @@ class CanClient:
           if self._recv_filter(rx_bus, rx_addr) and len(rx_data) > 0:
             rx_data = bytes(rx_data)  # convert bytearray to bytes
 
-            carlog.debug(f"CAN-RX: {hex(rx_addr)} - 0x{bytes.hex(rx_data)}")
+            if self.log_data:
+              carlog.debug(f"CAN-RX: {hex(rx_addr)} - 0x{bytes.hex(rx_data)}")
 
             # Cut off sub addr in first byte
             if self.rx_sub_addr is not None:
@@ -406,7 +408,8 @@ class CanClient:
       if self.sub_addr is not None:
         msg = bytes([self.sub_addr]) + msg
 
-      carlog.debug(f"CAN-TX: {hex(self.tx_addr)} - 0x{bytes.hex(msg)}")
+      if self.log_data:
+        carlog.debug(f"CAN-TX: {hex(self.tx_addr)} - 0x{bytes.hex(msg)}")
       assert len(msg) <= 8
 
       self.tx(self.tx_addr, msg, self.bus)
@@ -452,7 +455,7 @@ class IsoTpMessage:
     self.rx_idx = 0
     self.rx_done = False
 
-    if not setup_only:
+    if not setup_only and self._can_client.log_data:
       carlog.debug(f"ISO-TP: REQUEST - {hex(self._can_client.tx_addr)} 0x{bytes.hex(self.tx_dat)}")
     self._tx_first_frame(setup_only=setup_only)
 
@@ -492,7 +495,7 @@ class IsoTpMessage:
         if time.monotonic() - start_time > timeout:
           raise MessageTimeoutError("timeout waiting for response")
     finally:
-      if self.rx_dat:
+      if self.rx_dat and self._can_client.log_data:
         carlog.debug(f"ISO-TP: RESPONSE - {hex(self._can_client.rx_addr)} 0x{bytes.hex(self.rx_dat)}")
 
   def _isotp_rx_next(self, rx_data: bytes) -> ISOTP_FRAME_TYPE:

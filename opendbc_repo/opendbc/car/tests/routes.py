@@ -1,6 +1,7 @@
 from typing import NamedTuple
 
 from opendbc.car.chrysler.values import CAR as CHRYSLER
+from opendbc.car.fisker.values import CAR as FISKER
 from opendbc.car.gm.values import CAR as GM, CC_ONLY_CAR
 from opendbc.car.ford.values import CAR as FORD
 from opendbc.car.honda.values import CAR as HONDA
@@ -21,6 +22,7 @@ from opendbc.car.psa.values import CAR as PSA
 # FIXME: add routes for these cars
 non_tested_cars = [
   MOCK.MOCK,
+  FISKER.FISKER_OCEAN,                # single-model port; no shareable comma route
   GM.CADILLAC_ATS,
   GM.CADILLAC_ESCALADE_ASCM,
   GM.CADILLAC_ESCALADE_ESV_2019_ASCM,

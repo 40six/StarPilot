@@ -344,13 +344,14 @@ class VehicleSettingsManagerView(PanelManagerView):
         "get_state": lambda: self._controller._params.get_bool("GMDashSpoofOffsets"),
         "set_state": lambda s: self._controller._on_toggle("GMDashSpoofOffsets"),
       })
-    if cs.isGM and cs.hasOpenpilotLongitudinal:
+    if (cs.isGM and cs.hasOpenpilotLongitudinal) or cs.isFisker:
       toggles.append({
         "title": tr("CAN Ignition Only"),
         "subtitle": tr("Use Panda firmware that ignores the physical ignition line and starts only from CAN ignition."),
         "get_state": lambda: self._controller._params.get_bool("IgnoreIgnitionLine"),
         "set_state": lambda s: self._controller._on_panda_firmware_toggle("IgnoreIgnitionLine", tr("CAN Ignition Only requires a Panda firmware update.")),
       })
+    if cs.isGM and cs.hasOpenpilotLongitudinal:
       toggles.append({
         "title": tr("Remote Start Panda"),
         "get_state": lambda: self._controller._params.get_bool("RemoteStartBootsComma"),
