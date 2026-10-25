@@ -85,3 +85,39 @@ def test_cruise_state_from_vcu_basic_cruise(vcu_state):
   assert not ret.cruiseState.standstill
   if available:
     assert ret.cruiseState.speed == pytest.approx(55 * CV.MPH_TO_MS)
+
+
+def _feed_1d0(cs, parsers, packer, frames):
+  """Feed a sequence of (wire, rflag) ADAS_0x1D0 frames and return the reconstructed
+  full counters (CS.oem_1d0_secoc_full_ctr after each)."""
+  out = []
+  for wire, rflag in frames:
+    msg = packer.make_can_msg("ADAS_0x1D0", CANBUS.cam,
+                              {"ADAS_1D0_SSecOC_Fresh_Byte0": ((wire & 0x3F) << 2) | (rflag & 0x3)})
+    for cp in parsers.values():
+      cp.update([(0, [msg])])
+    cs.update(parsers, None)
+    out.append(cs.oem_1d0_secoc_full_ctr)
+  return out
+
+
+def test_secoc_full_counter_restarts_cleanly_across_reset():
+  # The OEM 0x1D0 counter runs 1..102 per window (wire 1..63, wrap to 0..38), then the
+  # window restarts at wire 1 with a new reset flag. The reconstructed full counter must
+  # follow 1..102 then restart at 1 — never gain an extra 64-frame wrap from the wire drop
+  # at the restart (the on-vehicle abort=8: delivered counter ran OEM+64).
+  CP = CarInterface.get_non_essential_params(CAR.FISKER_OCEAN)
+  FPCP = custom.StarPilotCarParams.new_message()
+  CS = CarState(CP, FPCP)
+  parsers = CS.get_can_parsers(CP)
+  packer = CANPacker(DBC[CAR.FISKER_OCEAN][Bus.pt])
+
+  # One full window on rflag=2: wire 1..63 (full 1..63), wire 0..38 (full 64..102).
+  win = [(w, 2) for w in list(range(1, 64)) + list(range(39))]
+  full = _feed_1d0(CS, parsers, packer, win)
+  assert full == list(range(1, 103)), full[:5] + ["..."] + full[-3:]
+
+  # Window restart: reset flag flips to 3, wire drops back to 1. Full must restart at 1,
+  # not jump to 65 (= 64 + 1), which was the +64 bug.
+  restart = _feed_1d0(CS, parsers, packer, [(1, 3), (2, 3), (3, 3)])
+  assert restart == [1, 2, 3], restart

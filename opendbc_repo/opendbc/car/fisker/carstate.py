@@ -164,7 +164,7 @@ class CarState(CarStateBase):
     self.oem_1d0_secoc_full_ctr = 0
     self._oem_secoc_wraps = 0
     self._oem_secoc_wire_last = 0
-    self._oem_secoc_reset_tracked = None
+    self._oem_secoc_rflag_last = None   # 0x1D0's own reset flag (byte0 & 3); window-restart key
 
     # ICC_0x52A cached values. This is the ICC settings frame we spoof on bus 2 when
     # cruise is engaged: we forward every OEM signal untouched EXCEPT ICCACCFuncTyp
@@ -445,23 +445,29 @@ class CarState(CarStateBase):
     oem_1c0 = cp_cam.vl["ADAS_0x1C0"]
     self.oem_1d0_alive = int(oem_1d0["ADAS_1D0_AliveCounter"])
     self.oem_1c0_alive = int(oem_1c0["ADAS_1C0_AliveCounter"])
-    cur_wire = (int(oem_1d0["ADAS_1D0_SSecOC_Fresh_Byte0"]) >> 2) & 0x3F
+    fresh0 = int(oem_1d0["ADAS_1D0_SSecOC_Fresh_Byte0"])
+    cur_wire = (fresh0 >> 2) & 0x3F
+    cur_rflag = fresh0 & 0x3        # low 2 bits of the SecOC reset counter, ON THIS 0x1D0 frame
     self.oem_1d0_secoc_wire_ctr = cur_wire
-    # Rebuild the full msg_counter that the EPS validates the MAC against. Only 6 bits
-    # are on the wire; the high bits are a PER-GW-RESET-WINDOW count — they reset to 0
-    # each time the GW `reset` counter increments (~1 Hz). Determined empirically
-    # on-vehicle 2026-10-19: a per-window seed (small high bits) held engagement with a
-    # valid MAC for ~0.5 s, while a continuous-from-startup counter (large high bits)
-    # failed the MAC within ~3 frames. So: zero the wrap count on each GW reset, and
-    # bump it on each 6-bit wire wrap (63 -> 0) within the window. A wrap is any
-    # decrease, caught as long as we never skip a full 64-frame span (we run at the
-    # OEM's 100 Hz).
-    if self.secoc_reset != self._oem_secoc_reset_tracked:
-      self._oem_secoc_reset_tracked = self.secoc_reset
+    # Rebuild the full msg_counter that the EPS validates the MAC against. Only 6 bits are
+    # on the wire; the high bits are a per-reset-window wrap count. full = wraps*64 + wire,
+    # wraps zeroed when the window restarts and bumped on each 6-bit wire wrap (63 -> 0).
+    #
+    # The window restart MUST be keyed on this 0x1D0 frame's OWN reset flag (byte0 & 3),
+    # NOT on GW_Syn_All's reset counter (0x20). On-vehicle 2026-10-25 the 0x1D0 restart
+    # lags the 0x20 reset by ~10 ms: keying on 0x20 zeroed wraps while 0x1D0 was still at
+    # a high wire in the old window, then the next frame's wire drop to the new window was
+    # miscounted as a wrap (+64). The decoded-from-MAC ground truth showed our delivered
+    # counter running exactly OEM+64, so every re-stamped MAC failed and the EPS aborted
+    # (abort=8) ~1 s in. The reset flag flips on the exact frame 0x1D0 restarts, so it
+    # tracks the window boundary with no skew; the accompanying wire drop is the restart,
+    # not a wrap, so it is not counted.
+    if self._oem_secoc_rflag_last is None or cur_rflag != self._oem_secoc_rflag_last:
       self._oem_secoc_wraps = 0
     elif cur_wire < self._oem_secoc_wire_last:
       self._oem_secoc_wraps += 1
     self._oem_secoc_wire_last = cur_wire
+    self._oem_secoc_rflag_last = cur_rflag
     self.oem_1d0_secoc_full_ctr = self._oem_secoc_wraps * 64 + cur_wire
 
     # ---- EPS lateral status (0x1C2) — snapshot for the spoof --------------
