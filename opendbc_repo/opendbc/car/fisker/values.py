@@ -232,3 +232,8 @@ STEER_THRESHOLD = 0.5  # Nm — driver torque to count as "hands on" (steeringPr
 # yielding early means little stored-up fight to release. Raise it if it ever yields on its
 # own (e.g. a sharp curve); lower it for an even lighter override.
 OVERRIDE_STEER_TORQUE = 3.0  # Nm
+# Hysteresis for the torque yield: once latched, only resume after driver torque drops below
+# OVERRIDE_RELEASE_TORQUE and stays there OVERRIDE_RELEASE_FRAMES (~100 Hz). Prevents the
+# grab/release chatter when the driver holds steady near the trip point.
+OVERRIDE_RELEASE_TORQUE = 1.0  # Nm — resume gate (above the ~0.3 Nm hands-off floor)
+OVERRIDE_RELEASE_FRAMES = 25   # ~0.25 s

@@ -8,6 +8,8 @@ from opendbc.car.fisker.values import (
   BUTTON_MAP,
   CANBUS,
   DBC,
+  OVERRIDE_RELEASE_FRAMES,
+  OVERRIDE_RELEASE_TORQUE,
   OVERRIDE_STEER_TORQUE,
   STEER_THRESHOLD,
 )
@@ -197,6 +199,11 @@ class CarState(CarStateBase):
     # steeringPressed is sensitive (light touch) for auto-lane-change / UI; this is
     # conservative (real overpower) for the EPS release in carcontroller. See update().
     self.driver_intervening = False
+    # Torque-override hysteresis: latch set when driver torque exceeds OVERRIDE_STEER_TORQUE,
+    # cleared only after it falls below OVERRIDE_RELEASE_TORQUE for OVERRIDE_RELEASE_FRAMES —
+    # stops the ~10 Hz grab/release chatter when the driver holds right at the trip point.
+    self._torque_override_latch = False
+    self._torque_override_release_frames = 0
 
     # Button state edge detection
     self._prev_button_state = dict.fromkeys(BUTTON_SIGNAL_TO_TYPE, 0)
@@ -269,7 +276,24 @@ class CarState(CarStateBase):
     # well below the EPS's own ~6.5 Nm intervention trip (measured 2026-10-26). This makes an
     # override take less effort and releases before the EPS fights up to its hard threshold,
     # which is what made the wheel jump when control broke free. The EPS bit stays a backstop.
-    torque_override = abs(ret.steeringTorque) > OVERRIDE_STEER_TORQUE
+    #
+    # Hysteresis: a single threshold chatters when the driver holds right at it — openpilot
+    # grabs (adding torque), which moves the reading, which flips the state, ~10 Hz on-vehicle
+    # 2026-10-26. So latch on above OVERRIDE_STEER_TORQUE and only release once torque has
+    # stayed below OVERRIDE_RELEASE_TORQUE for OVERRIDE_RELEASE_FRAMES: a clean grab and a
+    # clean release when the driver actually lets go.
+    tq = abs(ret.steeringTorque)
+    if tq > OVERRIDE_STEER_TORQUE:
+      self._torque_override_latch = True
+      self._torque_override_release_frames = 0
+    elif self._torque_override_latch:
+      if tq < OVERRIDE_RELEASE_TORQUE:
+        self._torque_override_release_frames += 1
+        if self._torque_override_release_frames >= OVERRIDE_RELEASE_FRAMES:
+          self._torque_override_latch = False
+      else:
+        self._torque_override_release_frames = 0
+    torque_override = self._torque_override_latch
     if drvr_intv_vld:
       self.driver_intervening = drvr_intv or torque_override
     else:

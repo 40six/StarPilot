@@ -7,7 +7,8 @@ from opendbc.car.fisker.carcontroller import (CarController, LAT_CANDIDATE_ADDR,
                                               apply_fisker_steer_angle_limits)
 from opendbc.car.fisker.carstate import CarState
 from opendbc.car.fisker.interface import CarInterface
-from opendbc.car.fisker.values import CANBUS, CAR, DBC, OVERRIDE_STEER_TORQUE
+from opendbc.car.fisker.values import (CANBUS, CAR, DBC, OVERRIDE_RELEASE_FRAMES,
+                                        OVERRIDE_RELEASE_TORQUE, OVERRIDE_STEER_TORQUE)
 from opendbc.car.lateral import apply_std_steer_angle_limits
 from opendbc.car.fisker.values import CarControllerParams
 
@@ -140,10 +141,15 @@ def test_torque_override_yields_below_eps_threshold(car):
     return cs.update(parsers, None)[0] is not None and cs.driver_intervening
 
   assert not intervening(OVERRIDE_STEER_TORQUE - 1.0)   # under threshold, EPS bit off -> hold
-  assert intervening(OVERRIDE_STEER_TORQUE + 0.5)       # over threshold -> yield
-  assert intervening(-(OVERRIDE_STEER_TORQUE + 0.5))    # either direction
-  assert intervening(0.0, detd=1)                       # EPS bit remains a backstop
-  assert not intervening(0.0, detd=0)                   # released
+  assert intervening(OVERRIDE_STEER_TORQUE + 0.5)       # over threshold -> yield (latched)
+  assert intervening(OVERRIDE_RELEASE_TORQUE + 0.5)     # held in the hysteresis band, no chatter
+  assert intervening(-(OVERRIDE_STEER_TORQUE + 0.5))    # re-trip, either direction
+  # Release only after torque stays below the release gate for the full hold time.
+  released = False
+  for _ in range(OVERRIDE_RELEASE_FRAMES + 2):
+    released = not intervening(0.0)
+  assert released
+  assert intervening(0.0, detd=1)                       # EPS bit remains an independent backstop
 
 
 def test_override_eps_off_deasserts_then_rearms(car):
