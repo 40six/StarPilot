@@ -139,11 +139,25 @@ class CarController(CarControllerBase):
     # activates after our FIRST TX). If that OEM frame beats our TX to EPS,
     # EPS's last-accepted counter == our TX counter → duplicate → abort=8.
     # We re-snap each tick during the delay to track OEM's latest wire value.
-    # 5 ticks (50 ms) is well beyond any plausible pandad/USB jitter window
-    # and ~5x the OEM frame period, so we're guaranteed to have observed
-    # OEM's post-engage counter at least a few times before we TX.
+    #
+    # The delay ALSO covers a second, larger race seen on-vehicle 2026-10-26:
+    # on this no-ACC-coded car the panda's AOL authorization (aol_allowed, i.e.
+    # controlsAllowed) rises ~180 ms AFTER openpilot first decides lat is engaged,
+    # because the two read the vehicle cruise/MFS state through independent code
+    # paths (software carstate vs. safety firmware) with different latencies.
+    # While openpilot TXes candidates but the panda is not yet authorized, panda
+    # arms the relay (blocking OEM's 0x1D0/0x1C0 from the EPS) but won't substitute
+    # our candidate → the EPS receives NEITHER OEM nor our frames → it starves and
+    # aborts (abort=8, EPS Available→Active never completes). The moving-engage log
+    # showed exactly this: a ~160 ms burst of CA=False drops right at the
+    # Available→Active transition. Holding off our TX until the delay expires keeps
+    # the relay disarmed (OEM keeps feeding the EPS) across the whole authorization
+    # window, so we only ever start injecting once the panda can actually deliver.
+    # 25 ticks (250 ms @ 100 Hz) covers the measured ~180 ms race with margin while
+    # keeping the engage handoff short; the OEM heartbeat steers the car during the
+    # hold (OEM ADAS is in Standby on this car, so it's just the keep-alive stream).
     self.engage_delay_remaining = 0
-    self.ENGAGE_DELAY_TICKS = 5
+    self.ENGAGE_DELAY_TICKS = 25
 
     # StarPilot Always On Lateral state, set by card.py each tick before apply()
     # (StarPilotCard.always_on_lateral_enabled). Replaces sunnypilot's CC_SP.mads.active.
