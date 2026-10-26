@@ -41,10 +41,11 @@ _BUTTON_TYPE = {
 BUTTON_SIGNAL_TO_TYPE = {sig: _BUTTON_TYPE[name] for sig, name in BUTTON_MAP.items()}
 
 # Per-signal predicates for "is this press active" on each MFS button. MFS_0x514 buttons
-# are 2-bit (0=No_Pressed, 1=Pressed, 2=Long_Press, 3=Reserved). The car side already
-# consumes short-press of MFS_RiBtnSouth for the ACC follow-distance adjustment, so to
-# avoid stepping on it we only treat the long-press (value 2) as the MADS trigger.
-# Everything else keeps the "any non-zero" meaning.
+# are 2-bit (0=No_Pressed, 1=Pressed, 2=Long_Press, 3=Reserved). MFS_RiBtnSouth toggles
+# Always On Lateral on ANY press (short or long) so the driver can enable/disable AOL with
+# a quick tap. The car side also uses its short press for the ACC follow-distance
+# adjustment, but the Ocean we target has no ACC coded, so that function is inert here and
+# there's nothing to step on. All buttons therefore use the "any non-zero" meaning.
 def get_new_frames(cp: CANParser, msg: str) -> list[dict[str, float]]:
   """Every `msg` frame received since the last update, decoded, oldest first. vl_all holds all of
   them (not just the latest), so a consumer built on this never drops or duplicates a frame."""
@@ -54,8 +55,6 @@ def get_new_frames(cp: CANParser, msg: str) -> list[dict[str, float]]:
 
 
 def _is_pressed(sig: str, cur: int) -> bool:
-  if sig == "MFS_RiBtnSouth":
-    return cur == 2
   return cur != 0
 
 
@@ -411,10 +410,11 @@ class CarState(CarStateBase):
     ret.cruiseState.speedCluster = ret.cruiseState.speed
 
     # ---- Buttons (MFSS) ----
-    # Edge-detect per signal with a signal-specific "is pressed" predicate so that e.g.
-    # MFS_RiBtnSouth short press (used by the car for the ACC follow-distance adjustment)
-    # doesn't trigger an lkas button event — only its long press does. See _is_pressed.
-    # Panda's fisker_rx_hook uses the same long-press-only predicate for lkas_on.
+    # Edge-detect per signal: any non-zero value is "pressed" (see _is_pressed), so
+    # MFS_RiBtnSouth toggles Always On Lateral on a short tap as well as a long press.
+    # Panda still toggles its own lkas_on on the long press, but that only feeds
+    # aol_allowed, which is already satisfied by acc_main_on on this car — AOL enable/
+    # disable is driven by this openpilot-side toggle, so a short tap takes effect.
     mfs = cp_pt.vl["MFS_0x514"]
     button_events = []
     for sig, btype in BUTTON_SIGNAL_TO_TYPE.items():

@@ -67,25 +67,20 @@ GEAR_MAP = {
 # Both MFS_RiBtnNorth and MFS_RiBtnEast engage the car's ACC on the vehicle side (VCU/ICC
 # treat them identically for cc_state transitions) and emit ButtonType.mainCruise.
 # StarPilot port: there is no sunnypilot MADS / per-button "ACC-only" arming. Engaging
-# cruise engages openpilot (lateral + the car's ACC); MFS_RiBtnSouth long press emits
-# ButtonType.lkas, which StarPilot's Always On Lateral uses (when "LKAS button" AOL
-# control is selected) and which panda also tracks to open aol_allowed.
+# cruise engages openpilot (lateral + the car's ACC); MFS_RiBtnSouth emits ButtonType.lkas
+# on any press (short tap or long hold), which StarPilot's Always On Lateral uses (when
+# "LKAS button" AOL control is selected) to toggle AOL on/off with a single tap.
 BUTTON_MAP = {
   "MFS_RiBtnNorth":  "mainCruise",   # ACC main
   "MFS_RiBtnEast":   "mainCruise",   # ACC main
   "MFS_LeRollPress": "setCruise",    # engage cruise
   "MFS_LeRollUp":    "accelCruise",  # +speed
   "MFS_LeRollDwn":   "decelCruise",  # -speed
-  "MFS_RiBtnSouth":  "lkas",         # Always On Lateral toggle — LONG PRESS only (see
-                                     #   carstate._is_pressed), short press is used by
-                                     #   the car for ACC follow-distance adjustment.
+  "MFS_RiBtnSouth":  "lkas",         # Always On Lateral toggle — any press (short or long).
+                                     #   The car's short-press follow-distance function is
+                                     #   inert here (no ACC coded), so a tap is free to use.
   # cancel / resume / gapAdjustCruise: TBD from bench testing
 }
-
-# DBC VAL_ for these signals is 0=No_Pressed 1=Pressed 2=Long_Press 3=Reserved — a single
-# signal carries both tap and hold as distinct enum values (not two signals). Buttons listed
-# here only fire their ButtonEvent on the Long_Press (2) state; a short Pressed (1) is ignored.
-BUTTON_LONG_PRESS_ONLY = {"MFS_RiBtnSouth"}
 
 
 class CarControllerParams:
