@@ -123,6 +123,40 @@ def test_fault_requires_valid_eps_recovery(car):
   assert update(0, 0, 0)  # soft latch still waiting for a valid recovery
 
 
+def test_engage_handoff_seeds_from_measured_angle(car):
+  # On-vehicle 2026-10-26: at a moving engage our command was still near 0 (model target)
+  # while the wheel sat at -2.4 deg, so panda dropped every candidate for ~160 ms until the
+  # limiter slewed in. Through the engage-delay hold apply_angle_last must track the measured
+  # wheel angle so the first transmitted frame is a legal one-step slew from the real wheel
+  # position, not from a stale reference.
+  cp, sp, cs = car
+  controller = CarController(DBC[CAR.FISKER_OCEAN], cp)
+  controller.FPCP = sp
+  controller.secoc_key_verified = True
+  controller.secoc_key = bytes(16)
+  controller.always_on_lateral_enabled = True
+  controller.apply_angle_last = 0.0            # stale straight-ahead reference
+  measured = -2.4
+  cs.out = structs.CarState(steeringAngleDeg=measured, vEgoRaw=20.0)
+  cc = structs.CarControl(latActive=True)
+  cc.actuators.steeringAngleDeg = 0.0          # model wants straight
+
+  # Rising edge opens the engage delay; through the hold we send nothing and
+  # apply_angle_last stays glued to the measured wheel angle. The rising-edge tick seeds
+  # the delay and then counts one off it, so there are ENGAGE_DELAY_TICKS - 1 pure hold
+  # ticks before the first TX.
+  for _ in range(controller.ENGAGE_DELAY_TICKS - 1):
+    _, frames = controller.update(cc.as_reader(), cs, 0)
+    assert LAT_CANDIDATE_ADDR not in {addr for addr, _, bus in frames if bus == LAT_CANDIDATE_BUS}
+    assert controller.apply_angle_last == pytest.approx(measured, abs=1e-3)
+
+  # First tick past the hold: we transmit, and the candidate is a legal slew FROM measured
+  # (within one step of it), never the stale 0.
+  _, frames = controller.update(cc.as_reader(), cs, 0)
+  sent = candidate_angle(frames)
+  assert abs(sent - measured) < 2.0
+
+
 def candidate_wires(frames):
   """SecOC wire counters ((byte4 >> 2) & 0x3F) of this tick's 0x1D0 candidates."""
   return sorted({(data[4] >> 2) & 0x3F for addr, data, bus in frames

@@ -304,6 +304,24 @@ class CarController(CarControllerBase):
     self.was_lat_engaged_prev = lat_engaged
     tx_lateral = (lat_engaged and self.engage_delay_remaining == 0) or in_fade
 
+    # Handoff seeding: whenever we are NOT transmitting lateral (not engaged, or still
+    # inside the engage-delay window), glue apply_angle_last to the measured wheel angle.
+    # The first frame we send after the hold is then a legal one-step slew FROM the real
+    # wheel position, so it sits inside both the panda angle-vs-measured rate check and
+    # the EPS's own error window.
+    #
+    # On-vehicle 2026-10-26 (fisker_handover3.py) the abort burst was exactly this: at a
+    # moving engage our command was still near 0 (the model's straight-ahead target slewed
+    # in during the delay) while the wheel was already at ~-2.4 deg, so panda dropped every
+    # candidate for ~160 ms until the limiter walked the command out to the measured angle —
+    # the drops cleared the instant cmd == meas. The counters climbed cleanly through the
+    # burst and CA stayed False even on the frames that DID deliver, ruling out SecOC and
+    # authorization. Seeding to measured removes the stale reference so there is no slew-in
+    # gap. apply_angle_last was computed above by slewing toward the model target; overwrite
+    # it here on non-TX ticks (the value is unused on those ticks since we send nothing).
+    if not tx_lateral:
+      self.apply_angle_last = CS.out.steeringAngleDeg
+
     # ---- SecOC + alive counter: seed once at the block moment, then free-run +1 ----
     # We become OEM's exact continuation. On the first TX after an idle gap (the
     # "block moment", i.e. when the panda relay starts stealing OEM's frames), snap
