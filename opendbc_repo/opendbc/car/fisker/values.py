@@ -235,9 +235,15 @@ OVERRIDE_STEER_TORQUE = 3.0  # Nm
 # Hysteresis for the torque yield: once latched, only resume after driver torque drops below
 # OVERRIDE_RELEASE_TORQUE and stays there OVERRIDE_RELEASE_FRAMES (~100 Hz). Prevents the
 # grab/release chatter when the driver holds steady near the trip point.
-OVERRIDE_RELEASE_TORQUE = 1.0  # Nm — resume gate (above the ~0.3 Nm hands-off floor)
+OVERRIDE_RELEASE_TORQUE = 0.5  # Nm — resume gate (above the ~0.3 Nm hands-off floor; tuned on-car)
 OVERRIDE_RELEASE_FRAMES = 25   # ~0.25 s
 
 # Pause lateral actuation below this speed (keep the EPS fed with Req=0) so the wheel
 # doesn't creep/center while stopped. 0.447 m/s = 1 mph.
 STANDSTILL_PAUSE_SPEED = 0.447  # m/s
+
+# Settle wait on resume: don't re-grab the wheel until it has stopped self-centering. Hold
+# while it moves faster than SETTLE_ANGLE_STEP deg per ~100 Hz tick (~0.2 = ~20 deg/s),
+# bounded by SETTLE_MAX_TICKS (~1.5 s) so it can't wait forever.
+SETTLE_ANGLE_STEP = 0.2   # deg/tick
+SETTLE_MAX_TICKS = 150    # ~1.5 s

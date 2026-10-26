@@ -192,6 +192,36 @@ def test_resume_from_pause_rearms_engage_delay(car):
   assert controller.engage_delay_remaining >= controller.ENGAGE_DELAY_TICKS - 1
 
 
+def test_settle_wait_holds_until_wheel_steadies(car):
+  # On resume we must not re-grab a wheel that's still self-centering fast, or we fight it
+  # (jerk + transient EPS abort + false limit alert). Keep holding while the wheel moves,
+  # resume only once it steadies.
+  cp, sp, cs = car
+  controller = CarController(DBC[CAR.FISKER_OCEAN], cp)
+  controller.FPCP = sp
+  controller.secoc_key_verified = True
+  controller.secoc_key = bytes(16)
+  controller.always_on_lateral_enabled = True
+  controller.was_lat_engaged_prev = True
+  controller.was_lat_active_prev = False    # resuming from a pause
+  controller.engage_delay_remaining = 0
+  cs.eps_lat_sts = 2
+  cc = structs.CarControl(latActive=True)
+
+  ang = 60.0
+  for _ in range(15):                       # wheel self-centering fast (4 deg/tick)
+    cs.out = structs.CarState(steeringAngleDeg=ang, vEgoRaw=20.0)
+    controller.update(cc.as_reader(), cs, 0)
+    ang -= 4.0
+  assert controller._settle_hold > 0                                        # still waiting
+  assert controller.engage_delay_remaining >= controller.ENGAGE_DELAY_TICKS - 1   # still held
+
+  for _ in range(5):                        # wheel steady now
+    cs.out = structs.CarState(steeringAngleDeg=8.0, vEgoRaw=20.0)
+    controller.update(cc.as_reader(), cs, 0)
+  assert controller._settle_hold == 0                                       # settled -> resume
+
+
 def test_override_eps_off_deasserts_then_rearms(car):
   # On-vehicle 2026-10-26: a hard overpower drives the EPS to Off (sts=0) and it stays there
   # while we keep asserting Sts=1, until we stop transmitting. So on EPS-Off we must de-assert

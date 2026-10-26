@@ -8,7 +8,8 @@ from opendbc.car.lateral import apply_std_steer_angle_limits
 
 from opendbc.car.fisker.fiskercan import FiskerCAN
 from opendbc.car.fisker.secoc import stamp_secoc, sync_mac
-from opendbc.car.fisker.values import CarControllerParams, FiskerFlagsSP, ICC_0x35B_OVERRIDES, STANDSTILL_PAUSE_SPEED
+from opendbc.car.fisker.values import (CarControllerParams, FiskerFlagsSP, ICC_0x35B_OVERRIDES,
+                                        SETTLE_ANGLE_STEP, SETTLE_MAX_TICKS, STANDSTILL_PAUSE_SPEED)
 
 
 VisualAlert = structs.CarControl.HUDControl.VisualAlert
@@ -115,6 +116,8 @@ class CarController(CarControllerBase):
     self._override_eps_recovery = False # EPS latched Off by a driver overpower -> de-assert to reset
     self._eps_was_active = False        # EPS reached Active this engagement (gates override recovery)
     self.was_lat_active_prev = False    # rising edge of lat_active within a session -> smooth re-entry
+    self._settle_hold = 0               # ticks left to wait for the wheel to stop self-centering
+    self._prev_steer_angle = 0.0        # for the settle angle-rate check
 
     # ICC 0x52A spoof: emit ONE frame per OEM tick (detected by AliveCounter change).
     # ICC broadcasts at ~10 Hz while we control at 100 Hz, so a naive tx-every-tick
@@ -254,11 +257,26 @@ class CarController(CarControllerBase):
     # speed) while the session stays engaged: re-arm the engage delay so we don't snap. During
     # the hold apply_angle_last re-seeds to the live wheel angle (see handoff seeding below)
     # and the counters re-snap, so we pick up from where the wheel actually is and slew to the
-    # target rather than yanking it — on-vehicle 2026-10-26 the wheel "jumped" on release
-    # because our command had lagged the fast self-centering wheel. The fresh-engage rising
-    # edge (below) handles the very first engage; this handles resumes within a session.
-    if lat_active and not self.was_lat_active_prev and self.was_lat_engaged_prev:
+    # target rather than yanking it. The fresh-engage rising edge (below) handles the very
+    # first engage; this handles resumes within a session.
+    resume_edge = lat_active and not self.was_lat_active_prev and self.was_lat_engaged_prev
+    if resume_edge:
       self.engage_delay_remaining = self.ENGAGE_DELAY_TICKS
+      self._settle_hold = SETTLE_MAX_TICKS
+    # Settle wait: a fixed hold still grabbed a wheel that was still self-centering fast on
+    # release, which fought the wheel — a jerk, a transient EPS abort ("steering temporarily
+    # unavailable"), and the rate limiter saturating (a false "limit" alert). On-vehicle
+    # 2026-10-26. So while settling, keep the hold extended as long as the wheel is still
+    # moving (> SETTLE_ANGLE_STEP deg/tick), and only let the engage delay run out and re-grab
+    # once it has steadied. Bounded by SETTLE_MAX_TICKS so it can't wait forever.
+    ang = CS.out.steeringAngleDeg
+    if self._settle_hold > 0:
+      self._settle_hold -= 1
+      if abs(ang - self._prev_steer_angle) > SETTLE_ANGLE_STEP:
+        self.engage_delay_remaining = self.ENGAGE_DELAY_TICKS
+      else:
+        self._settle_hold = 0
+    self._prev_steer_angle = ang
     self.was_lat_active_prev = lat_active
 
     desired_angle_deg = float(actuators.steeringAngleDeg)
