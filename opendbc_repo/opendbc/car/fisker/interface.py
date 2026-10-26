@@ -28,7 +28,12 @@ class CarInterface(CarInterfaceBase):
     # Reduced from 0.20: the higher delay made MPC over-anticipate the commanded
     # angle, causing overshoot on curve entry/exit.
     ret.steerActuatorDelay = 0.15
-    ret.steerLimitTimer = 0.4
+    # steerSaturated ("Turn Exceeds Steering Limit") fires when the measured wheel angle
+    # lags the command by >2.5 deg for this long. At 0.4 s it nagged during normal steering
+    # (worse on left turns, where road crown demands a bit more angle so the EPS tracking lag
+    # is larger) even though the car was tracking fine. 2.0 s requires a genuinely sustained
+    # saturation. Advisory only -- does not change steering behavior or any safety limit.
+    ret.steerLimitTimer = 2.0
     ret.steerAtStandstill = True
 
     # SecOC is mandatory on Ocean. The 16-byte AES key must be in params under "SecOCKey".
