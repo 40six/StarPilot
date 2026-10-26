@@ -7,7 +7,7 @@ from opendbc.car.fisker.carcontroller import (CarController, LAT_CANDIDATE_ADDR,
                                               apply_fisker_steer_angle_limits)
 from opendbc.car.fisker.carstate import CarState
 from opendbc.car.fisker.interface import CarInterface
-from opendbc.car.fisker.values import CANBUS, CAR, DBC
+from opendbc.car.fisker.values import CANBUS, CAR, DBC, OVERRIDE_STEER_TORQUE
 from opendbc.car.lateral import apply_std_steer_angle_limits
 from opendbc.car.fisker.values import CarControllerParams
 
@@ -121,6 +121,29 @@ def test_fault_requires_valid_eps_recovery(car):
   assert update(1, 1, 8, 'steerFaultPermanent')
   assert not update(0, 0, 0, 'steerFaultPermanent')
   assert update(0, 0, 0)  # soft latch still waiting for a valid recovery
+
+
+def test_torque_override_yields_below_eps_threshold(car):
+  # The EPS's own intervention bit only trips at ~6.5 Nm. We yield proactively at
+  # OVERRIDE_STEER_TORQUE (driver torque reads ~0 hands-off), so an override takes less
+  # effort and releases before the EPS fights up to its hard threshold.
+  cp, sp, cs = car
+  parsers = cs.get_can_parsers(cp)
+  packer = CANPacker(DBC[CAR.FISKER_OCEAN][Bus.pt])
+
+  def intervening(nm, detd=0, vld=1):
+    frame = packer.make_can_msg('EPS_0x1C4', CANBUS.pt, {
+      'EPS_DrvrSteerTq': abs(nm), 'EPS_DrvrSteerTqDir': 1 if nm < 0 else 0,
+      'EPS_DrvrIntvSteerWhlDetd': detd, 'EPS_DrvrIntvSteerWhlVld': vld})
+    for parser in parsers.values():
+      parser.update([(0, [frame])])
+    return cs.update(parsers, None)[0] is not None and cs.driver_intervening
+
+  assert not intervening(OVERRIDE_STEER_TORQUE - 1.0)   # under threshold, EPS bit off -> hold
+  assert intervening(OVERRIDE_STEER_TORQUE + 0.5)       # over threshold -> yield
+  assert intervening(-(OVERRIDE_STEER_TORQUE + 0.5))    # either direction
+  assert intervening(0.0, detd=1)                       # EPS bit remains a backstop
+  assert not intervening(0.0, detd=0)                   # released
 
 
 def test_override_eps_off_deasserts_then_rearms(car):

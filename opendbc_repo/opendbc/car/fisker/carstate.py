@@ -8,6 +8,7 @@ from opendbc.car.fisker.values import (
   BUTTON_MAP,
   CANBUS,
   DBC,
+  OVERRIDE_STEER_TORQUE,
   STEER_THRESHOLD,
 )
 
@@ -264,8 +265,13 @@ class CarState(CarStateBase):
     ret.steeringPressed = self.update_steering_pressed(abs(ret.steeringTorque) > STEER_THRESHOLD, 5)
     drvr_intv_vld = int(eps_tq["EPS_DrvrIntvSteerWhlVld"]) == 1
     drvr_intv = int(eps_tq["EPS_DrvrIntvSteerWhlDetd"]) == 1
+    # Proactive torque yield: release lateral once the driver applies OVERRIDE_STEER_TORQUE,
+    # well below the EPS's own ~6.5 Nm intervention trip (measured 2026-10-26). This makes an
+    # override take less effort and releases before the EPS fights up to its hard threshold,
+    # which is what made the wheel jump when control broke free. The EPS bit stays a backstop.
+    torque_override = abs(ret.steeringTorque) > OVERRIDE_STEER_TORQUE
     if drvr_intv_vld:
-      self.driver_intervening = drvr_intv
+      self.driver_intervening = drvr_intv or torque_override
     else:
       self.driver_intervening = abs(ret.steeringTorque) > STEER_THRESHOLD
 

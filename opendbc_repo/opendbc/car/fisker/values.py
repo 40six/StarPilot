@@ -222,4 +222,13 @@ FW_QUERY_CONFIG = FwQueryConfig(requests=[])
 
 DBC = CAR.create_dbc_map()
 
-STEER_THRESHOLD = 0.5  # Nm — driver torque to count as override (EPS_DrvrSteerTq, 0.01 Nm/LSB)
+STEER_THRESHOLD = 0.5  # Nm — driver torque to count as "hands on" (steeringPressed, ALC/UI)
+
+# Driver torque at which we proactively yield lateral (drop the request so the driver can
+# steer). Tunable. On-vehicle 2026-10-26 the EPS's own intervention detector only trips at
+# ~6.5 Nm, which is a lot of effort and lets the EPS fight up to that point before releasing
+# all at once (the wheel "jump"). Driver torque (EPS_DrvrSteerTq) reads ~0.0-0.3 Nm hands-off,
+# so 3.0 Nm sits well clear of the floor while being < half the EPS trip: easier override, and
+# yielding early means little stored-up fight to release. Raise it if it ever yields on its
+# own (e.g. a sharp curve); lower it for an even lighter override.
+OVERRIDE_STEER_TORQUE = 3.0  # Nm
