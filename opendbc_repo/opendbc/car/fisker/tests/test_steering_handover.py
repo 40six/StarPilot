@@ -152,6 +152,46 @@ def test_torque_override_yields_below_eps_threshold(car):
   assert intervening(0.0, detd=1)                       # EPS bit remains an independent backstop
 
 
+def test_standstill_pauses_lateral(car):
+  # Below ~1 mph we pause actuation so the wheel doesn't creep/center at a stop: Req follows
+  # the measured angle (heartbeat) instead of steering to the model target.
+  cp, sp, cs = car
+  controller = CarController(DBC[CAR.FISKER_OCEAN], cp)
+  controller.FPCP = sp
+  controller.secoc_key_verified = True
+  controller.secoc_key = bytes(16)
+  controller.always_on_lateral_enabled = True
+  controller.was_lat_engaged_prev = True
+  controller.was_lat_active_prev = True
+  controller.engage_delay_remaining = 0
+  controller.apply_angle_last = 10.0
+  cs.out = structs.CarState(steeringAngleDeg=10.0, vEgoRaw=0.0)   # stopped
+  cs.eps_lat_sts = 2
+  cc = structs.CarControl(latActive=True)
+  cc.actuators.steeringAngleDeg = 30.0                           # model wants 30 deg
+  _, frames = controller.update(cc.as_reader(), cs, 0)
+  assert abs(candidate_angle(frames) - 10.0) < 2.0              # paused: holds measured, not 30
+
+
+def test_resume_from_pause_rearms_engage_delay(car):
+  # Coming out of a pause (override release or crossing the standstill speed) within an
+  # engaged session re-arms the engage delay, so we ease back in instead of yanking the wheel.
+  cp, sp, cs = car
+  controller = CarController(DBC[CAR.FISKER_OCEAN], cp)
+  controller.FPCP = sp
+  controller.secoc_key_verified = True
+  controller.secoc_key = bytes(16)
+  controller.always_on_lateral_enabled = True
+  controller.was_lat_engaged_prev = True
+  controller.was_lat_active_prev = False    # lateral was paused last tick
+  controller.engage_delay_remaining = 0
+  cs.out = structs.CarState(steeringAngleDeg=0.0, vEgoRaw=20.0)
+  cs.eps_lat_sts = 2
+  cc = structs.CarControl(latActive=True)
+  controller.update(cc.as_reader(), cs, 0)
+  assert controller.engage_delay_remaining >= controller.ENGAGE_DELAY_TICKS - 1
+
+
 def test_override_eps_off_deasserts_then_rearms(car):
   # On-vehicle 2026-10-26: a hard overpower drives the EPS to Off (sts=0) and it stays there
   # while we keep asserting Sts=1, until we stop transmitting. So on EPS-Off we must de-assert
@@ -164,6 +204,7 @@ def test_override_eps_off_deasserts_then_rearms(car):
   controller.secoc_key = bytes(16)
   controller.always_on_lateral_enabled = True
   controller.was_lat_engaged_prev = True
+  controller.was_lat_active_prev = True
   controller.engage_delay_remaining = 0
   cs.out = structs.CarState(steeringAngleDeg=0.0, vEgoRaw=20.0)
   cs.eps_lat_sts = 2  # Active
@@ -246,6 +287,7 @@ def test_gw_reset_emits_low_counter_candidates(car):
   controller.secoc_key = bytes(16)
   controller.always_on_lateral_enabled = True
   controller.was_lat_engaged_prev = True   # already engaged: past the engage-delay window
+  controller.was_lat_active_prev = True
   controller.engage_delay_remaining = 0
   cs.out = structs.CarState(steeringAngleDeg=0.0, vEgoRaw=20.0)
   cs.secoc_trip, cs.secoc_reset = 1, 5

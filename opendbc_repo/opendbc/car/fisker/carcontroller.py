@@ -8,7 +8,7 @@ from opendbc.car.lateral import apply_std_steer_angle_limits
 
 from opendbc.car.fisker.fiskercan import FiskerCAN
 from opendbc.car.fisker.secoc import stamp_secoc, sync_mac
-from opendbc.car.fisker.values import CarControllerParams, FiskerFlagsSP, ICC_0x35B_OVERRIDES
+from opendbc.car.fisker.values import CarControllerParams, FiskerFlagsSP, ICC_0x35B_OVERRIDES, STANDSTILL_PAUSE_SPEED
 
 
 VisualAlert = structs.CarControl.HUDControl.VisualAlert
@@ -114,6 +114,7 @@ class CarController(CarControllerBase):
     self.was_tx_lateral_prev = False    # rising edge of lateral TX -> snap alive counters from OEM
     self._override_eps_recovery = False # EPS latched Off by a driver overpower -> de-assert to reset
     self._eps_was_active = False        # EPS reached Active this engagement (gates override recovery)
+    self.was_lat_active_prev = False    # rising edge of lat_active within a session -> smooth re-entry
 
     # ICC 0x52A spoof: emit ONE frame per OEM tick (detected by AliveCounter change).
     # ICC broadcasts at ~10 Hz while we control at 100 Hz, so a naive tx-every-tick
@@ -244,7 +245,21 @@ class CarController(CarControllerBase):
     lat_session = bool(CC.enabled) or bool(self.always_on_lateral_enabled)
     engaged = (CS.out.cruiseState.enabled or lat_session) and secoc_ok
     lat_engaged = lat_session and secoc_ok
-    lat_active = CC.latActive and secoc_ok and not CS.driver_intervening
+    # Pause actuation below ~1 mph so the wheel doesn't creep/center at a stop (we keep the
+    # session and feed the EPS with Req=0, same as a driver-override pause).
+    standstill_pause = CS.out.vEgoRaw < STANDSTILL_PAUSE_SPEED
+    lat_active = CC.latActive and secoc_ok and not CS.driver_intervening and not standstill_pause
+
+    # Smooth re-entry after any pause (driver override release, or crossing the standstill
+    # speed) while the session stays engaged: re-arm the engage delay so we don't snap. During
+    # the hold apply_angle_last re-seeds to the live wheel angle (see handoff seeding below)
+    # and the counters re-snap, so we pick up from where the wheel actually is and slew to the
+    # target rather than yanking it — on-vehicle 2026-10-26 the wheel "jumped" on release
+    # because our command had lagged the fast self-centering wheel. The fresh-engage rising
+    # edge (below) handles the very first engage; this handles resumes within a session.
+    if lat_active and not self.was_lat_active_prev and self.was_lat_engaged_prev:
+      self.engage_delay_remaining = self.ENGAGE_DELAY_TICKS
+    self.was_lat_active_prev = lat_active
 
     desired_angle_deg = float(actuators.steeringAngleDeg)
     # Rate limiting through the handover (see apply_fisker_steer_angle_limits): on a

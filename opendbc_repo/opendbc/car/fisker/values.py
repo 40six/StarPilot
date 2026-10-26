@@ -237,3 +237,7 @@ OVERRIDE_STEER_TORQUE = 3.0  # Nm
 # grab/release chatter when the driver holds steady near the trip point.
 OVERRIDE_RELEASE_TORQUE = 1.0  # Nm — resume gate (above the ~0.3 Nm hands-off floor)
 OVERRIDE_RELEASE_FRAMES = 25   # ~0.25 s
+
+# Pause lateral actuation below this speed (keep the EPS fed with Req=0) so the wheel
+# doesn't creep/center while stopped. 0.447 m/s = 1 mph.
+STANDSTILL_PAUSE_SPEED = 0.447  # m/s
