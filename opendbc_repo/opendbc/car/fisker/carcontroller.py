@@ -112,6 +112,8 @@ class CarController(CarControllerBase):
     self.alive_1c0 = 0
     self.was_lat_engaged_prev = False   # tracks lat_engaged (MADS) rising edge for engage delay
     self.was_tx_lateral_prev = False    # rising edge of lateral TX -> snap alive counters from OEM
+    self._override_eps_recovery = False # EPS latched Off by a driver overpower -> de-assert to reset
+    self._eps_was_active = False        # EPS reached Active this engagement (gates override recovery)
 
     # ICC 0x52A spoof: emit ONE frame per OEM tick (detected by AliveCounter change).
     # ICC broadcasts at ~10 Hz while we control at 100 Hz, so a naive tx-every-tick
@@ -303,6 +305,38 @@ class CarController(CarControllerBase):
         self.lat_fade_remaining -= 1
     self.was_lat_engaged_prev = lat_engaged
     tx_lateral = (lat_engaged and self.engage_delay_remaining == 0) or in_fade
+
+    # EPS override-latch recovery. On-vehicle 2026-10-26: a hard overpower drives the EPS to
+    # Off (EPS_AdasLatCtrlSts == 0) and it will NOT come back while we keep asserting
+    # engagement (Sts=1/Req=0). It sat at sts=0 / intervention=1 for ~48 s — through the
+    # driver repeatedly releasing — until openpilot stopped asserting, then recovered to
+    # Available in ~0.1 s. So the EPS needs us to DE-ASSERT (stop transmitting -> Sts=0) to
+    # clear the override, then a fresh engage to return. Previously only an AOL off/on cycle
+    # supplied that, so lateral paused on the first overpower and never resumed on its own.
+    #
+    # While engaged and the EPS reads Off, stop transmitting so OEM's own 0x1D0/0x1C0 flow to
+    # the EPS and it resets to Available. Once it's back (sts != 0) AND the driver has let go
+    # (not steeringPressed), re-arm the normal engage delay: OEM keeps feeding the EPS through
+    # the hold, the SecOC/alive counters re-snap from OEM on the first TX after (was_tx_* went
+    # False while we were de-asserted), and apply_angle_last re-seeds to the measured wheel
+    # angle — a clean fresh handshake, so steering resumes with no button press.
+    # Gate recovery on the EPS having actually come up this engagement: only a drop to Off
+    # AFTER it reached Active is an overpower knock-out. At initial engage the EPS may read
+    # Off/Available before our handshake brings it up — we must keep transmitting then, not
+    # de-assert, so recovery must not fire until it has been Active at least once.
+    if not lat_engaged:
+      self._eps_was_active = False
+      self._override_eps_recovery = False
+    elif CS.eps_lat_sts == 2:
+      self._eps_was_active = True
+    if lat_engaged and CS.eps_lat_sts == 0 and self._eps_was_active:
+      self._override_eps_recovery = True
+    if self._override_eps_recovery:
+      tx_lateral = False   # de-assert so the EPS can clear its override latch
+      if lat_engaged and CS.eps_lat_sts != 0 and not CS.out.steeringPressed:
+        self._override_eps_recovery = False
+        self._eps_was_active = False
+        self.engage_delay_remaining = self.ENGAGE_DELAY_TICKS
 
     # Handoff seeding: whenever we are NOT transmitting lateral (not engaged, or still
     # inside the engage-delay window), glue apply_angle_last to the measured wheel angle.

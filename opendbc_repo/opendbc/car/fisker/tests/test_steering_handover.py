@@ -123,6 +123,48 @@ def test_fault_requires_valid_eps_recovery(car):
   assert update(0, 0, 0)  # soft latch still waiting for a valid recovery
 
 
+def test_override_eps_off_deasserts_then_rearms(car):
+  # On-vehicle 2026-10-26: a hard overpower drives the EPS to Off (sts=0) and it stays there
+  # while we keep asserting Sts=1, until we stop transmitting. So on EPS-Off we must de-assert
+  # (send nothing) to let it reset to Available, then re-arm a fresh engage once it's back and
+  # the driver has let go — otherwise lateral pauses on the first override and never resumes.
+  cp, sp, cs = car
+  controller = CarController(DBC[CAR.FISKER_OCEAN], cp)
+  controller.FPCP = sp
+  controller.secoc_key_verified = True
+  controller.secoc_key = bytes(16)
+  controller.always_on_lateral_enabled = True
+  controller.was_lat_engaged_prev = True
+  controller.engage_delay_remaining = 0
+  cs.out = structs.CarState(steeringAngleDeg=0.0, vEgoRaw=20.0)
+  cs.eps_lat_sts = 2  # Active
+  cc = structs.CarControl(latActive=True)
+
+  def candidates_present():
+    _, frames = controller.update(cc.as_reader(), cs, 0)
+    return LAT_CANDIDATE_ADDR in {addr for addr, _, bus in frames if bus == LAT_CANDIDATE_BUS}
+
+  assert candidates_present()                      # steady state: transmitting
+
+  # Hard overpower drops the EPS to Off -> we must stop transmitting so it can reset.
+  cs.eps_lat_sts = 0
+  cs.out.steeringPressed = True
+  for _ in range(3):
+    assert not candidates_present()
+  assert controller._override_eps_recovery
+
+  # EPS back to Available but driver still holding -> stay de-asserted (don't fight).
+  cs.eps_lat_sts = 1
+  assert not candidates_present()
+  assert controller._override_eps_recovery
+
+  # EPS Available AND driver released -> re-arm the engage delay for a fresh handshake.
+  cs.out.steeringPressed = False
+  controller.update(cc.as_reader(), cs, 0)
+  assert not controller._override_eps_recovery
+  assert controller.engage_delay_remaining == controller.ENGAGE_DELAY_TICKS
+
+
 def test_engage_handoff_seeds_from_measured_angle(car):
   # On-vehicle 2026-10-26: at a moving engage our command was still near 0 (model target)
   # while the wheel sat at -2.4 deg, so panda dropped every candidate for ~160 ms until the
