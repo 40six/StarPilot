@@ -7,8 +7,9 @@ from opendbc.car.fisker.carcontroller import (CarController, LAT_CANDIDATE_ADDR,
                                               apply_fisker_steer_angle_limits)
 from opendbc.car.fisker.carstate import CarState
 from opendbc.car.fisker.interface import CarInterface
-from opendbc.car.fisker.values import (CANBUS, CAR, DBC, OVERRIDE_RELEASE_FRAMES,
-                                        OVERRIDE_RELEASE_TORQUE, OVERRIDE_STEER_TORQUE)
+from opendbc.car.fisker.values import (ANGLE_OVERRIDE_DEG, ANGLE_OVERRIDE_RELEASE_DEG, CANBUS, CAR,
+                                        DBC, OVERRIDE_RELEASE_FRAMES, OVERRIDE_RELEASE_TORQUE,
+                                        OVERRIDE_STEER_TORQUE)
 from opendbc.car.lateral import apply_std_steer_angle_limits
 from opendbc.car.fisker.values import CarControllerParams
 
@@ -122,6 +123,43 @@ def test_fault_requires_valid_eps_recovery(car):
   assert update(1, 1, 8, 'steerFaultPermanent')
   assert not update(0, 0, 0, 'steerFaultPermanent')
   assert update(0, 0, 0)  # soft latch still waiting for a valid recovery
+
+
+def test_angle_divergence_override(car):
+  # On-vehicle 2026-10-27: during a hand U-turn the EPS assisted the turn, so column torque
+  # stayed under the yield threshold and the EPS intervention bit never tripped, yet the wheel
+  # ran ~70 deg past our command -> openpilot kept commanding into a near-full-lock abort=9
+  # (permanent LKAS fault). When the measured wheel diverges far from the commanded angle we
+  # must yield. Hysteresis: latch at OVERRIDE_DEG, release within RELEASE_DEG.
+  cp, sp, cs = car
+  controller = CarController(DBC[CAR.FISKER_OCEAN], cp)
+  controller.FPCP = sp
+  controller.secoc_key_verified = True
+  controller.secoc_key = bytes(16)
+  controller.always_on_lateral_enabled = True
+  controller.was_lat_engaged_prev = True
+  controller.was_lat_active_prev = True
+  controller.engage_delay_remaining = 0
+  controller.apply_angle_last = 5.0
+  cs.out = structs.CarState(steeringAngleDeg=5.0, vEgoRaw=20.0)
+  cs.eps_lat_sts = 2
+  cc = structs.CarControl(latActive=True)
+  cc.actuators.steeringAngleDeg = 5.0   # model commands 5 deg throughout
+
+  controller.update(cc.as_reader(), cs, 0)
+  assert not controller._angle_override_latch                      # wheel on target
+
+  cs.out.steeringAngleDeg = 5.0 + ANGLE_OVERRIDE_DEG + 10.0         # driver turns well past
+  controller.update(cc.as_reader(), cs, 0)
+  assert controller._angle_override_latch                          # -> yield
+
+  cs.out.steeringAngleDeg = 5.0 + (ANGLE_OVERRIDE_DEG + ANGLE_OVERRIDE_RELEASE_DEG) / 2
+  controller.update(cc.as_reader(), cs, 0)
+  assert controller._angle_override_latch                          # held in hysteresis band
+
+  cs.out.steeringAngleDeg = 5.0 + ANGLE_OVERRIDE_RELEASE_DEG - 2.0  # wheel back near command
+  controller.update(cc.as_reader(), cs, 0)
+  assert not controller._angle_override_latch                      # -> resume
 
 
 def test_torque_override_yields_below_eps_threshold(car):

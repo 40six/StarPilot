@@ -247,3 +247,12 @@ STANDSTILL_PAUSE_SPEED = 0.447  # m/s
 # bounded by SETTLE_MAX_TICKS (~1.5 s) so it can't wait forever.
 SETTLE_ANGLE_STEP = 0.2   # deg/tick
 SETTLE_MAX_TICKS = 150    # ~1.5 s
+
+# Angle-divergence override: when the measured wheel is turned this far (deg) from the angle
+# the model is commanding, the driver is clearly steering independently (hard manual input /
+# U-turn) even if column torque stayed under OVERRIDE_STEER_TORQUE because the EPS was power-
+# assisting the turn. Yield rather than keep commanding into it (on-vehicle 2026-10-27 that
+# caused a near-full-lock EPS abort=9 and a permanent LKAS fault). Hysteresis: latch on at
+# OVERRIDE_DEG, release once the wheel is back within RELEASE_DEG of the command.
+ANGLE_OVERRIDE_DEG = 30.0          # deg
+ANGLE_OVERRIDE_RELEASE_DEG = 10.0  # deg

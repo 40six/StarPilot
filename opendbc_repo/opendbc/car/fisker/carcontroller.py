@@ -8,7 +8,8 @@ from opendbc.car.lateral import apply_std_steer_angle_limits
 
 from opendbc.car.fisker.fiskercan import FiskerCAN
 from opendbc.car.fisker.secoc import stamp_secoc, sync_mac
-from opendbc.car.fisker.values import (CarControllerParams, FiskerFlagsSP, ICC_0x35B_OVERRIDES,
+from opendbc.car.fisker.values import (ANGLE_OVERRIDE_DEG, ANGLE_OVERRIDE_RELEASE_DEG,
+                                        CarControllerParams, FiskerFlagsSP, ICC_0x35B_OVERRIDES,
                                         SETTLE_ANGLE_STEP, SETTLE_MAX_TICKS, STANDSTILL_PAUSE_SPEED)
 
 
@@ -118,6 +119,7 @@ class CarController(CarControllerBase):
     self.was_lat_active_prev = False    # rising edge of lat_active within a session -> smooth re-entry
     self._settle_hold = 0               # ticks left to wait for the wheel to stop self-centering
     self._prev_steer_angle = 0.0        # for the settle angle-rate check
+    self._angle_override_latch = False  # measured wheel diverged far from command -> driver steering
 
     # ICC 0x52A spoof: emit ONE frame per OEM tick (detected by AliveCounter change).
     # ICC broadcasts at ~10 Hz while we control at 100 Hz, so a naive tx-every-tick
@@ -251,7 +253,17 @@ class CarController(CarControllerBase):
     # Pause actuation below ~1 mph so the wheel doesn't creep/center at a stop (we keep the
     # session and feed the EPS with Req=0, same as a driver-override pause).
     standstill_pause = CS.out.vEgoRaw < STANDSTILL_PAUSE_SPEED
-    lat_active = CC.latActive and secoc_ok and not CS.driver_intervening and not standstill_pause
+    # Angle-divergence override: measured wheel far from the model's commanded angle => the
+    # driver is steering independently (hard manual input the torque yield missed because the
+    # EPS was assisting). Yield instead of commanding into it. Latch with hysteresis so it
+    # holds through the maneuver and clears once the wheel is back near the command.
+    angle_diverge = abs(CS.out.steeringAngleDeg - float(CC.actuators.steeringAngleDeg))
+    if angle_diverge > ANGLE_OVERRIDE_DEG:
+      self._angle_override_latch = True
+    elif angle_diverge < ANGLE_OVERRIDE_RELEASE_DEG:
+      self._angle_override_latch = False
+    lat_active = (CC.latActive and secoc_ok and not CS.driver_intervening
+                  and not standstill_pause and not self._angle_override_latch)
 
     # Smooth re-entry after any pause (driver override release, or crossing the standstill
     # speed) while the session stays engaged: re-arm the engage delay so we don't snap. During
