@@ -383,6 +383,16 @@ class CarController(CarControllerBase):
         self._eps_was_active = False
         self.engage_delay_remaining = self.ENGAGE_DELAY_TICKS
 
+    # Driver angle-override: fully de-assert, don't just drop Req. When the wheel has diverged
+    # far from our command (driver steering hard, e.g. to full lock) we must STOP transmitting
+    # rather than keep our SecOC candidate stream running at an extreme angle — on-vehicle
+    # 2026-10-27 a GW SecOC reset landing in that stream at/near full lock dropped frames and
+    # aborted (abort=9), latching a permanent LKAS fault on the return-to-center re-grab.
+    # De-asserting lets OEM's own 0x1D0 feed the EPS through the maneuver (OEM handles its own
+    # resets); the latch clears on return-to-center and the resume-edge re-arm re-grabs cleanly.
+    if self._angle_override_latch:
+      tx_lateral = False
+
     # Handoff seeding: whenever we are NOT transmitting lateral (not engaged, or still
     # inside the engage-delay window), glue apply_angle_last to the measured wheel angle.
     # The first frame we send after the hold is then a legal one-step slew FROM the real

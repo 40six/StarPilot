@@ -150,8 +150,10 @@ def test_angle_divergence_override(car):
   assert not controller._angle_override_latch                      # wheel on target
 
   cs.out.steeringAngleDeg = 5.0 + ANGLE_OVERRIDE_DEG + 10.0         # driver turns well past
-  controller.update(cc.as_reader(), cs, 0)
+  _, frames = controller.update(cc.as_reader(), cs, 0)
   assert controller._angle_override_latch                          # -> yield
+  # fully de-assert while latched: no candidates sent, so OEM's own 0x1D0 feeds the EPS
+  assert LAT_CANDIDATE_ADDR not in {addr for addr, _, bus in frames if bus == LAT_CANDIDATE_BUS}
 
   cs.out.steeringAngleDeg = 5.0 + (ANGLE_OVERRIDE_DEG + ANGLE_OVERRIDE_RELEASE_DEG) / 2
   controller.update(cc.as_reader(), cs, 0)
