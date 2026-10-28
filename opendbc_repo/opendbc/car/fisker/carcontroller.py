@@ -612,16 +612,24 @@ class CarController(CarControllerBase):
         can_sends.append(self.fcan.create_long_status(long_active, gas_override,
                                                        gear_req=0, counter=alive))
 
-      # 0x118 ESP/AEB handshake — only while actively controlling (matches panda's OEM-0x118
-      # block gate), counter-aligned at the takeover edge.
-      if long_active:
+      # 0x118 ESP/AEB handshake. Gated on cruiseState.enabled — i.e. EXACTLY the window panda
+      # blocks the OEM's 0x118 (controls_allowed == cruise engaged) — NOT on long_active.
+      # On-vehicle 2026-10-28: panda blocks OEM 0x118 whenever controls_allowed, but when we
+      # only sent ours while long_active, every moment cruise stayed engaged while openpilot
+      # long dropped (the VCU basic cruise stays Active after an openpilot disengage) left the
+      # ESP with NO 0x118 on bus 0 — the handshake vanished for ~150 ms and the ESP flagged
+      # ESP_FltIndcn_AEB on the gap. Spanning the full blocked window keeps the stream alive;
+      # ESP_Sts=3 only while long_active (authorizes decel), idle (0) otherwise. Counter seeded
+      # from the OEM's 0x118 at the rising edge (clean takeover), +1/frame after.
+      long_hs_tx = bool(CS.out.cruiseState.enabled)
+      if long_hs_tx:
         if not self.was_tx_118_prev:
           self.alive_118 = (int(CS.oem_118_alive) + 1) % 15
         else:
           self.alive_118 = (self.alive_118 + 1) % 15
         can_sends.append(self.fcan.create_long_esp_handshake(long_active, gas_override,
                                                              counter=self.alive_118))
-      self.was_tx_118_prev = long_active
+      self.was_tx_118_prev = long_hs_tx
 
     # ---- ICC SVS / BSD / APA settings (0x35B, ICC on bus 0 -> ADAS module on bus 2) ----
     # Optional: only relayed when ICC_0x35B_OVERRIDES has entries. Panda blocks the ICC's own
