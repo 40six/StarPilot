@@ -488,9 +488,15 @@ static bool fisker_fwd_hook(int bus_num, int addr) {
     // substitute our candidate (when armed) or pass OEM's through (when disarmed). The
     // modify hook drops it when armed-but-no-candidate, so OEM's raw 0x1D0 never reaches
     // the EPS during engagement.
-    // Longitudinal (0x121) is unaffected by MADS — MADS is lateral-only. Only block the
-    // OEM's accel when cruise is engaged and openpilot is driving longitudinal.
-    if (fisker_longitudinal && (addr == 0x121) && controls_allowed) {
+    // Longitudinal (0x121 accel, 0x117 status, 0x118 ESP/AEB handshake) is unaffected by
+    // MADS — MADS is lateral-only. Block the OEM's copies only when cruise is engaged and
+    // openpilot is driving longitudinal, so the VCU/ESP sees exactly one source of each.
+    // 0x117/0x118 added 2026-10-28: with only 0x121 blocked, the OEM's 0x117 (Sts=Off) kept
+    // the VCU from honoring our Typ=2, and our 0x118 double-streamed on top of the OEM's and
+    // tripped ESP_FltIndcn_AEB. Blocking all three makes our Typ=2 + ESP_Sts=3 the sole
+    // control stream (and suppresses the OEM AEB handshake while engaged — accepted on the
+    // fisker-long branch to test whether the handshake unlocks VCU decel).
+    if (fisker_longitudinal && ((addr == 0x121) || (addr == 0x117) || (addr == 0x118)) && controls_allowed) {
       block_msg = true;
     }
   }

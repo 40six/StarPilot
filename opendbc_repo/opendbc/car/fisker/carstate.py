@@ -157,6 +157,7 @@ class CarState(CarStateBase):
     # msg_counter; enough to align lower bits at engage.
     self.oem_1d0_alive = 0
     self.oem_1c0_alive = 0
+    self.oem_118_alive = 0
     self.oem_1d0_secoc_wire_ctr = 0    # (byte >> 2) & 0x3F — lower 6 bits of msg_counter
 
     # Reconstructed FULL SecOC msg_counter for 0x1D0. Only 6 bits are on the wire; the
@@ -475,6 +476,10 @@ class CarState(CarStateBase):
     oem_1c0 = cp_cam.vl["ADAS_0x1C0"]
     self.oem_1d0_alive = int(oem_1d0["ADAS_1D0_AliveCounter"])
     self.oem_1c0_alive = int(oem_1c0["ADAS_1C0_AliveCounter"])
+    # OEM 0x118 (long/ESP AEB handshake) AliveCounter — carcontroller seeds its own 0x118
+    # counter from this at the long-engage edge so the single-source takeover (panda blocks
+    # the OEM's 0x118 while we drive long) continues the ESP's expected sequence.
+    self.oem_118_alive = int(cp_cam.vl["ADAS_0x118"]["ADAS_118_AliveCounter"])
     fresh0 = int(oem_1d0["ADAS_1D0_SSecOC_Fresh_Byte0"])
     cur_wire = (fresh0 >> 2) & 0x3F
     cur_rflag = fresh0 & 0x3        # low 2 bits of the SecOC reset counter, ON THIS 0x1D0 frame
@@ -583,6 +588,7 @@ class CarState(CarStateBase):
       # the very first re-engage frame is what surfaces as "ADAS error" on the cluster.
       ("ADAS_0x1C0", 100),  # ADAS_1C0_AliveCounter
       ("ADAS_0x1D0", 100),  # ADAS_1D0_AliveCounter + ADAS_1D0_SSecOC_Fresh_Byte0
+      ("ADAS_0x118", 100),  # ADAS_118_AliveCounter — long/ESP (AEB) handshake takeover align
     ]
     return {
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], pt_msgs, CANBUS.pt),

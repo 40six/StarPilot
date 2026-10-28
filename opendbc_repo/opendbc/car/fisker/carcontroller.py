@@ -112,6 +112,8 @@ class CarController(CarControllerBase):
     # (EPS rejects duplicates in the E2E monotonic check).
     self.alive_1d0 = 0
     self.alive_1c0 = 0
+    self.alive_118 = 0                  # our 0x118 (long/ESP AEB handshake) AliveCounter
+    self.was_tx_118_prev = False        # rising edge of 0x118 TX -> seed alive_118 from OEM
     self.was_lat_engaged_prev = False   # tracks lat_engaged (MADS) rising edge for engage delay
     self.was_tx_lateral_prev = False    # rising edge of lateral TX -> snap alive counters from OEM
     self._override_eps_recovery = False # EPS latched Off by a driver overpower -> de-assert to reset
@@ -585,25 +587,41 @@ class CarController(CarControllerBase):
       # mechanism that requires driver-activated Speed Limiter mode; not the path openpilot
       # needs.
       #
-      # 0x118 (ADAS/ESP AEB handshake) is deliberately NOT sent. On-vehicle 2026-10-28:
-      # panda's fwd_hook blocks the OEM's 0x121 bus2->bus0 while we drive long, but NOT the
-      # OEM's 0x117/0x118. So our 0x118 landed on top of the OEM's still-flowing 0x118 — two
-      # senders of the AEB handshake at ~176 Hz with conflicting AliveCounters. The ESP
-      # flagged ESP_FltIndcn_AEB ("AEB unavailable"/"ADAS fault"), which carstate maps to
-      # accFaulted -> openpilot "Cruise fault: restart to engage", a few seconds after SET.
-      # We now send only our control-path frames (0x121 accel, 0x117 status with Typ=2) and
-      # leave the factory AEB handshake (0x118) entirely to the OEM, untouched — keeps
-      # factory AEB alive and removes the double-stream. Our 0x118 carried only zeros
-      # (JerkReq/BrkPrefill/HBA/AEB all 0 — regen-only decel), so dropping it costs no
-      # control authority; VCU regen decel is gated on 0x117 Typ=2 + 0x121, not on 0x118.
+      # 0x118 (ADAS/ESP AEB handshake) — decel-authorization experiment (fisker-long).
+      # Diagnostic on-vehicle 2026-10-28: with 0x118 NOT sent and only 0x121+0x117(Typ=2)
+      # going out, the car engages cleanly but ignores every NEGATIVE AccelReq — the VCU
+      # basic cruise (VCU_Sts_CC_ICC=3) holds its own setpoint and the ADAS is only allowed
+      # to ADD accel, not brake. The authorization the VCU/ESP needs to let the ADAS
+      # decelerate is believed to ride on this 0x118 handshake (ADAS_LgtCtrl_ESP_Sts=3).
+      # So we send our 0x118 again — but ONLY while actively controlling long (long_active),
+      # and panda now blocks the OEM's 0x117/0x118 bus2->bus0 whenever controls_allowed (see
+      # fisker_fwd_hook), so there is exactly ONE 0x118 source during control. That removes
+      # the ~176 Hz double-stream that tripped ESP_FltIndcn_AEB before. TRADE-OFF: the OEM's
+      # own AEB handshake is suppressed while openpilot longitudinal is engaged (factory AEB
+      # inactive during engagement) — accepted for this experiment; fisker-ocean baseline is
+      # untouched. We seed alive_118 from the OEM's current 0x118 counter at the TX rising
+      # edge (like the lateral 0x1D0/0x1C0 handoff) so the ESP sees a continuous sequence
+      # across the takeover, then +1 per frame.
       if engaged or self.long_ever_active:
         # 0x121 accel command (SecOC)
         accel_msg = self.fcan.create_accel_command(accel, accel_active, alive)
         can_sends.append(self._stamp(accel_msg, ACCEL_CAN_ID, trip, reset, self.secoc_window_ctr))
 
-        # 0x117 status (plain E2E, no SecOC). 0x118 AEB handshake intentionally omitted (above).
+        # 0x117 status (plain E2E, no SecOC). Panda blocks OEM 0x117 while controls_allowed,
+        # so our Sts=3/Typ=2 is the sole 0x117 the VCU sees during control.
         can_sends.append(self.fcan.create_long_status(long_active, gas_override,
                                                        gear_req=0, counter=alive))
+
+      # 0x118 ESP/AEB handshake — only while actively controlling (matches panda's OEM-0x118
+      # block gate), counter-aligned at the takeover edge.
+      if long_active:
+        if not self.was_tx_118_prev:
+          self.alive_118 = (int(CS.oem_118_alive) + 1) % 15
+        else:
+          self.alive_118 = (self.alive_118 + 1) % 15
+        can_sends.append(self.fcan.create_long_esp_handshake(long_active, gas_override,
+                                                             counter=self.alive_118))
+      self.was_tx_118_prev = long_active
 
     # ---- ICC SVS / BSD / APA settings (0x35B, ICC on bus 0 -> ADAS module on bus 2) ----
     # Optional: only relayed when ICC_0x35B_OVERRIDES has entries. Panda blocks the ICC's own
