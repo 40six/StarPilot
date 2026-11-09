@@ -9,7 +9,7 @@ from cereal import custom
 from opendbc.can import CANPacker
 from opendbc.car import Bus
 from opendbc.car.common.conversions import Conversions as CV
-from opendbc.car.fisker.carstate import CarState
+from opendbc.car.fisker.carstate import ACC_FAULT_FRAMES, CarState
 from opendbc.car.fisker.interface import CarInterface
 from opendbc.car.fisker.values import CANBUS, CAR, DBC
 
@@ -85,6 +85,43 @@ def test_cruise_state_from_vcu_basic_cruise(vcu_state):
   assert not ret.cruiseState.standstill
   if available:
     assert ret.cruiseState.speed == pytest.approx(55 * CV.MPH_TO_MS)
+
+
+def _acc_faulted_sequence(states, gear):
+  """Feed one ADAS_0x313 frame per ACC state at the given VCU_GearSig and return accFaulted after each."""
+  CP = CarInterface.get_non_essential_params(CAR.FISKER_OCEAN)
+  CS = CarState(CP, custom.StarPilotCarParams.new_message())
+  parsers = CS.get_can_parsers(CP)
+  packer = CANPacker(DBC[CAR.FISKER_OCEAN][Bus.pt])
+  out = []
+  for acc_state in states:
+    frames = [
+      packer.make_can_msg("ADAS_0x313", CANBUS.cam, {"ADAS_Sts_ACC_ICC": acc_state}),
+      packer.make_can_msg("VCU_0x214", CANBUS.pt, {"VCU_GearSig": gear}),
+    ]
+    for cp in parsers.values():
+      cp.update([(0, frames)])
+    ret, _ = CS.update(parsers, None)
+    out.append(ret.accFaulted)
+  return out
+
+
+@pytest.mark.parametrize("gear", [1, 3])  # park, reverse
+def test_acc_unavailable_in_park_and_reverse_is_not_a_fault(gear):
+  # ADAS 3.1.1 holds Failure_reversible the whole time the car is in P or R
+  assert not any(_acc_faulted_sequence([9] * (ACC_FAULT_FRAMES * 3), gear))
+
+
+def test_acc_deactivation_blip_is_not_a_fault():
+  # Active -> Deactivation_brake -> Failure_irreversible for 2 frames -> Standby, in Drive
+  assert not any(_acc_faulted_sequence([3, 7, 10, 10, 2, 2], gear=4))
+
+
+@pytest.mark.parametrize("acc_state", [9, 10])
+def test_persistent_acc_failure_in_drive_is_a_fault(acc_state):
+  out = _acc_faulted_sequence([acc_state] * ACC_FAULT_FRAMES, gear=4)
+  assert not any(out[:-1])
+  assert out[-1]
 
 
 def _feed_1d0(cs, parsers, packer, frames):
