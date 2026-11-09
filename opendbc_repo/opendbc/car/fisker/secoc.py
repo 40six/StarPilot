@@ -23,14 +23,46 @@ The GW freshness-sync message (0x20) uses a different, simpler MAC:
 """
 
 import struct
+from functools import lru_cache
 from Crypto.Cipher import AES
-from Crypto.Hash import CMAC
+
+_BLOCK = 16
+_RB = 0x87   # CMAC constant for a 128-bit block cipher (RFC 4493)
+
+
+def _dbl(block: int) -> int:
+  """Doubling in GF(2^128) as used for the CMAC subkeys (RFC 4493 §2.3)."""
+  block <<= 1
+  if block >> 128:
+    block = (block & ((1 << 128) - 1)) ^ _RB
+  return block
+
+
+@lru_cache(maxsize=4)
+def _cmac_ctx(key: bytes):
+  """AES-ECB cipher + CMAC subkeys K1/K2, computed once per key. Building a fresh CMAC object
+  per frame (key schedule + subkeys every time) cost ~0.28 ms on a comma 3X; with 11 lateral
+  and 11 longitudinal candidates per 10 ms tick that overran the control loop."""
+  ecb = AES.new(key, AES.MODE_ECB)
+  k1 = _dbl(int.from_bytes(ecb.encrypt(bytes(_BLOCK)), "big"))
+  return ecb, k1, _dbl(k1)
 
 
 def _cmac24(key: bytes, data: bytes) -> bytes:
-  c = CMAC.new(key, ciphermod=AES)
-  c.update(data)
-  return c.digest()[:3]   # 24 most-significant bits
+  """AES-128-CMAC (RFC 4493) truncated to its 24 most-significant bits. Every Fisker SecOC input
+  fits in one block (14 bytes for data PDUs, 7 for the GW sync), so this is usually a single
+  AES encryption with the cached key schedule."""
+  ecb, k1, k2 = _cmac_ctx(key)
+  n = max(1, -(-len(data) // _BLOCK))
+  last = data[(n - 1) * _BLOCK:]
+  if len(last) == _BLOCK:
+    last_int = int.from_bytes(last, "big") ^ k1
+  else:
+    last_int = int.from_bytes(last + b"\x80" + bytes(_BLOCK - len(last) - 1), "big") ^ k2
+  x = 0
+  for i in range(n - 1):
+    x = int.from_bytes(ecb.encrypt((x ^ int.from_bytes(data[i * _BLOCK:(i + 1) * _BLOCK], "big")).to_bytes(_BLOCK, "big")), "big")
+  return ecb.encrypt((x ^ last_int).to_bytes(_BLOCK, "big"))[:3]
 
 
 def build_freshness(trip: int, reset: int, msg_counter: int) -> bytes:
