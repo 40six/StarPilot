@@ -171,6 +171,19 @@ class CarState(CarStateBase):
     self._oem_secoc_wraps = 0
     self._oem_secoc_wire_last = 0
     self._oem_secoc_rflag_last = None   # 0x1D0's own reset flag (byte0 & 3); window-restart key
+    # OEM ADAS_0x121 (accel request): the frame openpilot longitudinal substitutes into (see
+    # carcontroller). Same SecOC counter reconstruction as 0x1D0, keyed on 0x121's own reset flag.
+    self.oem_121_values: dict[str, float] = {}
+    self.oem_121_alive = 0
+    self.oem_121_accel = 0.0
+    self.oem_121_rflag = 0
+    self.oem_121_secoc_full_ctr = 0
+    # The wrap count is only known once a window restart has been seen: until then the counter
+    # may already be past 63 and the rebuilt value off by 64 (wrong MAC), so don't sign with it.
+    self.oem_121_ctr_synced = False
+    self._oem_121_wraps = 0
+    self._oem_121_wire_last = 0
+    self._oem_121_rflag_last = None
 
     # ICC_0x52A cached values. This is the ICC settings frame we spoof on bus 2 when
     # cruise is engaged: we forward every OEM signal untouched EXCEPT ICCACCFuncTyp
@@ -514,6 +527,24 @@ class CarState(CarStateBase):
     self._oem_secoc_rflag_last = cur_rflag
     self.oem_1d0_secoc_full_ctr = self._oem_secoc_wraps * 64 + cur_wire
 
+    # OEM ADAS_0x121: snapshot the whole frame and rebuild its full SecOC counter exactly as
+    # for 0x1D0 above. Verified on-vehicle 2026-11-09 (ADAS 3.1.1): re-signing the OEM's own
+    # 0x121 with this counter reproduced its MAC on 1941 of 1942 frames.
+    oem_121 = cp_cam.vl["ADAS_0x121"]
+    self.oem_121_values = dict(oem_121)
+    self.oem_121_alive = int(oem_121["ADAS_121_AliveCounter"])
+    self.oem_121_accel = float(oem_121["ADAS_LgtCtrl_AccelReq"])
+    fresh121 = int(oem_121["ADAS_121_SSecOC_Fresh_Byte0"])
+    wire121, self.oem_121_rflag = (fresh121 >> 2) & 0x3F, fresh121 & 0x3
+    if self._oem_121_rflag_last is None or self.oem_121_rflag != self._oem_121_rflag_last:
+      self.oem_121_ctr_synced = self._oem_121_rflag_last is not None
+      self._oem_121_wraps = 0
+    elif wire121 < self._oem_121_wire_last:
+      self._oem_121_wraps += 1
+    self._oem_121_wire_last = wire121
+    self._oem_121_rflag_last = self.oem_121_rflag
+    self.oem_121_secoc_full_ctr = self._oem_121_wraps * 64 + wire121
+
     # ---- EPS lateral status (0x1C2) — snapshot for the spoof --------------
     # EPS publishes this on bus 0 at ~50 Hz. During our MADS engagement we re-emit
     # it on bus 2 with EPS_AdasLatCtrlSts forced to Available (see
@@ -597,6 +628,7 @@ class CarState(CarStateBase):
       # the very first re-engage frame is what surfaces as "ADAS error" on the cluster.
       ("ADAS_0x1C0", 100),  # ADAS_1C0_AliveCounter
       ("ADAS_0x1D0", 100),  # ADAS_1D0_AliveCounter + ADAS_1D0_SSecOC_Fresh_Byte0
+      ("ADAS_0x121", 100),  # OEM accel request — the frame openpilot long substitutes into
     ]
     return {
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], pt_msgs, CANBUS.pt),

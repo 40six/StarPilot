@@ -175,6 +175,16 @@ class FiskerCAN:
     data = bytes([chk]) + data[1:]
     return addr, data, bus
 
+  def create_accel_substitute(self, oem_values: dict[str, float], accel: float, counter: int):
+    """ADAS_0x121 rebuilt from the OEM ADAS's own frame (`oem_values`, decoded from bus 2) with
+    only ADAS_LgtCtrl_AccelReq replaced and the AliveCounter set for the frame it will stand in
+    for. AccelVld and the reserved bits stay the OEM's. The caller stamps the SecOC tail."""
+    values = {**oem_values, "ADAS_LgtCtrl_AccelReq": accel, "ADAS_121_AliveCounter": counter & 0xF,
+              "ADAS_121_CheckSum": 0}
+    addr, data, bus = self.packer.make_can_msg("ADAS_0x121", CANBUS.pt, values)
+    chk = fisker_plain_checksum(addr, data)
+    return addr, bytes([chk]) + data[1:], bus
+
   def create_long_status(self, long_active: bool, drvr_override: bool,
                          gear_req: int, counter: int):
     """ADAS_0x117 — long-control status + parking gear request, 10 ms cycle (plain E2E).

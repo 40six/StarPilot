@@ -10,9 +10,8 @@
 // Buses: ADASBUS = bus 0.
 //   TX  0x1D0  ADAS_LatCtrl_SteerAnReq    steering angle (SecOC)
 //   TX  0x1C0  ADAS_LatCtrl activation    plain E2E, lateral activation/status
-//   TX  0x121  ADAS_LgtCtrl_AccelReq      accel (SecOC, longitudinal only)
-//   TX  0x117  ADAS long control status   plain E2E, Sts/Typ (CC -> ACC transition)
-//   TX  0x118  ADAS long/ESP handshake    plain E2E, ESP-side mirror + jerk/prefill/AEB
+//   TX  0x5A1  0x121 accel candidates     bus 1, buffered then substituted into the OEM ADAS's
+//              own forwarded 0x121 (longitudinal only); 0x117/0x118 are never touched
 //   TX  0x52A  ICC settings spoof         bus 2 (to ADAS); plain E2E — see below
 //   RX  0x115  wheel speeds -> vehicle_moving
 //   RX  0x318  vehicle speed + brake pedal
@@ -103,6 +102,31 @@ static uint32_t fisker_cand_last_rx = 0U;
 
 static bool fisker_cand_armed(void) {
   return safety_get_ts_elapsed(microsecond_timer_get(), fisker_cand_last_rx) < FISKER_CAND_ARM_US;
+}
+
+// ---- 0x121 accel candidate substitution (openpilot long inside the OEM ADAS's ACC) ----
+// Same pool mechanism for longitudinal: openpilot ships stamped 0x121 payloads as 0x5A1 on
+// bus 1 (the OEM ADAS's own 0x121 with only AccelReq replaced) and panda swaps the one
+// matching the ADAS's current byte 4 into the bus-2 -> bus-0 forward. Unlike 0x1D0 there is
+// never a gap: when no fresh, in-limit candidate matches (or controls aren't allowed) the
+// ADAS's own 0x121 is forwarded unchanged — it is always a valid request from the stock ACC.
+// 0x117/0x118 (incl. the AEB channel) are never touched.
+#define FISKER_LONG_CANDIDATE_ADDR 0x5A1U
+
+typedef struct {
+  uint8_t data[8];
+  uint8_t byte4;     // on-wire counter+reset-flag this candidate was stamped for
+  uint32_t rx_ts;    // when captured
+  bool accel_ok;     // accel passed longitudinal_accel_checks at capture
+} FiskerLongCandidate;
+
+static FiskerLongCandidate fisker_long_cand[64];   // keyed by wire counter = (byte4 >> 2) & 0x3F
+static uint32_t fisker_long_cand_last_rx = 0U;
+static bool fisker_long_cand_seen = false;
+
+static bool fisker_long_cand_armed(void) {
+  return fisker_long_cand_seen &&
+         (safety_get_ts_elapsed(microsecond_timer_get(), fisker_long_cand_last_rx) < FISKER_CAND_ARM_US);
 }
 
 // Steering: raw CAN at 0.0625 deg/LSB, offset -780 deg. Raw 12480 == 0 deg.
@@ -303,20 +327,23 @@ static bool fisker_tx_hook(const CANPacket_t *msg) {
     }
   }
 
-  // Accel command (0x121)
-  if (msg->addr == 0x121U) {
+  // 0x121 accel candidate pool (0x5A1 on bus 1). Validate the accel with the normal long
+  // limits (also requires longitudinal to be allowed), buffer it keyed by wire counter, and
+  // never transmit it. Only accepted with the longitudinal flag (0x5A1 isn't in the
+  // lateral-only TX list).
+  if ((msg->addr == FISKER_LONG_CANDIDATE_ADDR) && (msg->bus == 1U)) {
     int raw_accel = (msg->data[2] << 8) | msg->data[3];
-
-    if (fisker_longitudinal) {
-      if (longitudinal_accel_checks(raw_accel, FISKER_LONG_LIMITS)) {
-        tx = false;
-      }
-    } else {
-      // Not controlling longitudinal: only the inactive value may be sent.
-      if (raw_accel != FISKER_ACCEL_INACTIVE) {
-        tx = false;
-      }
+    uint8_t wire = (msg->data[4] >> 2) & 0x3FU;
+    FiskerLongCandidate *c = &fisker_long_cand[wire];
+    for (int i = 0; i < 8; i++) {
+      c->data[i] = msg->data[i];
     }
+    c->byte4 = msg->data[4];
+    c->rx_ts = microsecond_timer_get();
+    c->accel_ok = fisker_longitudinal && !longitudinal_accel_checks(raw_accel, FISKER_LONG_LIMITS);
+    fisker_long_cand_last_rx = c->rx_ts;
+    fisker_long_cand_seen = true;
+    tx = false;  // panda-internal: never transmit onto the radar link
   }
 
   // 0x1D0 candidate pool (0x5D0 on bus 1). Each candidate is a fully-stamped 0x1D0
@@ -387,6 +414,19 @@ static bool fisker_fwd_modify(CANPacket_t *to_send) {
       emit = false;  // armed but nothing valid to send this frame -> gap
     }
   }
+  // 0x121: substitute our accel only for a fresh, in-limit candidate on the ADAS's exact byte 4
+  // while controls are allowed; otherwise the ADAS's own frame goes through unchanged.
+  if ((to_send->addr == 0x121U) && (to_send->bus == 2U) && fisker_longitudinal && controls_allowed &&
+      fisker_long_cand_armed()) {
+    uint8_t wire = (to_send->data[4] >> 2) & 0x3FU;
+    const FiskerLongCandidate *c = &fisker_long_cand[wire];
+    bool fresh = safety_get_ts_elapsed(microsecond_timer_get(), c->rx_ts) < FISKER_CAND_FRESH_US;
+    if (fresh && c->accel_ok && (c->byte4 == to_send->data[4])) {
+      for (int i = 0; i < 8; i++) {
+        to_send->data[i] = c->data[i];
+      }
+    }
+  }
   return emit;
 }
 
@@ -411,9 +451,7 @@ static safety_config fisker_init(uint16_t param) {
     {0x1D0, 0, 8, .check_relay = true, .disable_static_blocking = true},    // steering angle (fwd path; see fisker_fwd_modify)
     {0x5D0, 1, 8, .check_relay = false},                                    // 0x1D0 candidate pool (buffered, then rejected: never sent on bus 1)
     {0x1C0, 0, 8, .check_relay = true, .disable_static_blocking = true},    // lateral activation
-    {0x121, 0, 8, .check_relay = true, .disable_static_blocking = true},    // accel (op long only)
-    {0x117, 0, 8, .check_relay = true, .disable_static_blocking = true},    // long control status
-    {0x118, 0, 8, .check_relay = true, .disable_static_blocking = true},    // long/ESP handshake
+    {0x5A1, 1, 8, .check_relay = false},                                    // 0x121 accel candidate pool (buffered, then rejected)
     {0x52A, 2, 8, .check_relay = false},                                    // ICC settings spoof (bus 2)
     {0x35B, 2, 8, .check_relay = false},                                    // ICC SVS/BSD/APA settings (bus 2)
   };
@@ -459,6 +497,9 @@ static safety_config fisker_init(uint16_t param) {
   // Lateral relay stays idle at init — carcontroller only starts TXing lateral
   // when MADS engages, and we want OEM 0x1D0/0x1C0 to flow through until then.
   fisker_lat_tx_last = 0U;
+  // Long candidate pool stays disarmed until openpilot sends its first 0x5A1.
+  fisker_long_cand_last_rx = 0U;
+  fisker_long_cand_seen = false;
 
   // cppcheck-suppress knownConditionTrueFalse
   return fisker_longitudinal ? BUILD_SAFETY_CFG(fisker_rx_checks, FISKER_LONG_TX_MSGS)
@@ -488,11 +529,8 @@ static bool fisker_fwd_hook(int bus_num, int addr) {
     // substitute our candidate (when armed) or pass OEM's through (when disarmed). The
     // modify hook drops it when armed-but-no-candidate, so OEM's raw 0x1D0 never reaches
     // the EPS during engagement.
-    // Longitudinal (0x121) is unaffected by MADS — MADS is lateral-only. Only block the
-    // OEM's accel when cruise is engaged and openpilot is driving longitudinal.
-    if (fisker_longitudinal && (addr == 0x121) && controls_allowed) {
-      block_msg = true;
-    }
+    // 0x121 (accel) is never blocked either: fisker_fwd_modify substitutes its AccelReq or
+    // forwards the OEM ADAS's own frame. 0x117/0x118 always pass through untouched.
   }
   if (bus_num == 0) {
     // ICC settings spoof (0x52A, ICC → ADAS/FCM): block the real ICC_0x52A from

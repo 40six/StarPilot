@@ -42,6 +42,36 @@ def test_checksum_valid():
   assert fisker_plain_checksum(addr, bytes([0]) + data[1:]) == data[0]
 
 
+def _decode_oem_121(data: bytes) -> dict:
+  from opendbc.can import CANParser
+  cp = CANParser(DBC[CAR.FISKER_OCEAN][Bus.pt], [("ADAS_0x121", 0)], 2)
+  cp.update([(0, [(0x121, data, 2)])])
+  return dict(cp.vl["ADAS_0x121"])
+
+
+def test_0x121_substitute_rebuilds_oem_frame_bit_exact():
+  # Stock ADAS 0x121 frames captured on bus 2 (ADAS 3.1.1, 2026-11-09). Rebuilt from their own
+  # decoded values with their own AccelReq, bytes 0-3 (the part covered by the E2E checksum and
+  # the SecOC MAC) must come back identical — that is what makes pass-through substitution
+  # transparent. Bytes 4-7 are the SecOC tail, stamped separately.
+  for hexframe in ("40d5800563498658", "69108005b7dd6205"):
+    oem = bytes.fromhex(hexframe)
+    values = _decode_oem_121(oem)
+    _, data, _ = make().create_accel_substitute(values, values["ADAS_LgtCtrl_AccelReq"],
+                                                int(values["ADAS_121_AliveCounter"]))
+    assert data[:4] == oem[:4], hexframe
+
+
+def test_0x121_substitute_replaces_only_accel():
+  oem = bytes.fromhex("40d5800563498658")
+  values = _decode_oem_121(oem)
+  addr, data, _ = make().create_accel_substitute(values, -1.25, 9)
+  assert abs(((data[2] << 8) | data[3]) * 0.0004882 - 16 - (-1.25)) < 0.001
+  assert data[1] & 0xF == 9
+  assert data[1] & 0xF0 == oem[1] & 0xF0          # AccelVld + reserved bits stay the ADAS's
+  assert fisker_plain_checksum(addr, bytes([0]) + data[1:]) == data[0]
+
+
 def test_accel_cap_matches_panda():
   from opendbc.car.fisker.interface import CarInterface
   from opendbc.car.fisker.values import CarControllerParams

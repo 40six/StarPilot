@@ -124,6 +124,25 @@ def test_persistent_acc_failure_in_drive_is_a_fault(acc_state):
   assert out[-1]
 
 
+def test_oem_121_counter_synced_only_after_window_restart():
+  # Until the first SecOC window restart (reset-flag change) the wrap count is unknown, so the
+  # rebuilt 0x121 counter must not be trusted; after it, wraps are counted from the restart.
+  CP = CarInterface.get_non_essential_params(CAR.FISKER_OCEAN)
+  CS = CarState(CP, custom.StarPilotCarParams.new_message())
+  parsers = CS.get_can_parsers(CP)
+  packer = CANPacker(DBC[CAR.FISKER_OCEAN][Bus.pt])
+  synced, full = [], []
+  for wire, rflag in [(40, 1), (63, 1), (2, 1), (1, 2), (2, 2), (63, 2), (0, 2), (1, 2)]:
+    msg = packer.make_can_msg("ADAS_0x121", CANBUS.cam, {"ADAS_121_SSecOC_Fresh_Byte0": (wire << 2) | rflag})
+    for cp in parsers.values():
+      cp.update([(0, [msg])])
+    CS.update(parsers, None)
+    synced.append(CS.oem_121_ctr_synced)
+    full.append(CS.oem_121_secoc_full_ctr)
+  assert synced == [False, False, False, True, True, True, True, True]
+  assert full[3:] == [1, 2, 63, 64, 65]
+
+
 def _feed_1d0(cs, parsers, packer, frames):
   """Feed a sequence of (wire, rflag) ADAS_0x1D0 frames and return the reconstructed
   full counters (CS.oem_1d0_secoc_full_ctr after each)."""
