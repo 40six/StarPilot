@@ -28,6 +28,10 @@ GEAR_MAP = {
   7: GearShifter.sport,
 }
 
+# ADAS_Sts_ACC_ICC 9/10 must hold this long (carstate runs at 100 Hz) outside P/R before it
+# counts as a cruise fault. ADAS 3.1.1 blips 10 for 1-2 frames on every ACC deactivation.
+ACC_FAULT_FRAMES = 50
+
 
 # Map from MFSS DBC signal name to openpilot ButtonType
 _BUTTON_TYPE = {
@@ -204,6 +208,9 @@ class CarState(CarStateBase):
     # stops the ~10 Hz grab/release chatter when the driver holds right at the trip point.
     self._torque_override_latch = False
     self._torque_override_release_frames = 0
+
+    # Consecutive frames of ADAS ACC failure outside P/R (see ACC_FAULT_FRAMES).
+    self._acc_fault_frames = 0
 
     # Button state edge detection
     self._prev_button_state = dict.fromkeys(BUTTON_SIGNAL_TO_TYPE, 0)
@@ -463,7 +470,14 @@ class CarState(CarStateBase):
     # ADAS_Sts_ACC_ICC 9/10 = Failure_reversible/irreversible (same enum position as
     # the old VCU_Sts_CC_ICC path — the fault codes carry the same meaning across
     # both authors).
-    ret.accFaulted = cc_state in (9, 10) or vcu_cc_state in (9, 10) or bool(cp_pt.vl["ESP_0x114"]["ESP_FltIndcn_AEB"])
+    # ADAS 3.1.1 with ACC coded holds Failure_reversible for as long as the car is in Park or
+    # Reverse (the cluster's "ACC unavailable"), and blips Failure_irreversible for 1-2 frames
+    # on every ACC deactivation before settling back to Standby. Neither is a real fault, so
+    # the ADAS state only counts outside P/R once it has held for ACC_FAULT_FRAMES.
+    acc_failing = cc_state in (9, 10) and ret.gearShifter not in (GearShifter.park, GearShifter.reverse)
+    self._acc_fault_frames = self._acc_fault_frames + 1 if acc_failing else 0
+    ret.accFaulted = (self._acc_fault_frames >= ACC_FAULT_FRAMES or vcu_cc_state in (9, 10) or
+                      bool(cp_pt.vl["ESP_0x114"]["ESP_FltIndcn_AEB"]))
 
     # ---- OEM ADAS lateral counters (bus 2, for takeover alignment) --------
     # Snapshot the OEM ADAS's own AliveCounter and SSecOC_Fresh_Byte0 from bus 2. The
