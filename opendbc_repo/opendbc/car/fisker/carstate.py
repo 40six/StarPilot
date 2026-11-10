@@ -28,9 +28,11 @@ GEAR_MAP = {
   7: GearShifter.sport,
 }
 
-# ADAS_Sts_ACC_ICC 9/10 must hold this long (carstate runs at 100 Hz) outside P/R before it
-# counts as a cruise fault. ADAS 3.1.1 blips 10 for 1-2 frames on every ACC deactivation.
+# ADAS_Sts_ACC_ICC 9/10 must hold this long (carstate runs at 100 Hz) in a driving gear before
+# it counts as a cruise fault. ADAS 3.1.1 blips 10 for 1-2 frames on every ACC deactivation.
 ACC_FAULT_FRAMES = 50
+# ADAS 3.1.1 reports ACC failure whenever ACC isn't possible, which includes every gear but these.
+ACC_DRIVING_GEARS = (GearShifter.drive, GearShifter.eco, GearShifter.sport)
 
 
 # Map from MFSS DBC signal name to openpilot ButtonType
@@ -171,6 +173,7 @@ class CarState(CarStateBase):
     self._oem_secoc_wraps = 0
     self._oem_secoc_wire_last = 0
     self._oem_secoc_rflag_last = None   # 0x1D0's own reset flag (byte0 & 3); window-restart key
+    self.oem_1d0_rflag = 0              # reset flag on OEM's latest 0x1D0 (which window it's still in)
     # OEM ADAS_0x121 (accel request): the frame openpilot longitudinal substitutes into (see
     # carcontroller). Same SecOC counter reconstruction as 0x1D0, keyed on 0x121's own reset flag.
     self.oem_121_values: dict[str, float] = {}
@@ -483,11 +486,12 @@ class CarState(CarStateBase):
     # ADAS_Sts_ACC_ICC 9/10 = Failure_reversible/irreversible (same enum position as
     # the old VCU_Sts_CC_ICC path — the fault codes carry the same meaning across
     # both authors).
-    # ADAS 3.1.1 with ACC coded holds Failure_reversible for as long as the car is in Park or
-    # Reverse (the cluster's "ACC unavailable"), and blips Failure_irreversible for 1-2 frames
-    # on every ACC deactivation before settling back to Standby. Neither is a real fault, so
-    # the ADAS state only counts outside P/R once it has held for ACC_FAULT_FRAMES.
-    acc_failing = cc_state in (9, 10) and ret.gearShifter not in (GearShifter.park, GearShifter.reverse)
+    # ADAS 3.1.1 with ACC coded holds Failure_reversible for as long as the car is out of a
+    # driving gear (P, R, N, mid-shift: the cluster's "ACC unavailable"; on-vehicle 2026-11-09
+    # it held through Neutral at a stop), and blips Failure_irreversible for 1-2 frames on every
+    # ACC deactivation before settling back to Standby. Neither is a real fault, so the ADAS
+    # state only counts in a driving gear once it has held for ACC_FAULT_FRAMES.
+    acc_failing = cc_state in (9, 10) and ret.gearShifter in ACC_DRIVING_GEARS
     self._acc_fault_frames = self._acc_fault_frames + 1 if acc_failing else 0
     ret.accFaulted = (self._acc_fault_frames >= ACC_FAULT_FRAMES or vcu_cc_state in (9, 10) or
                       bool(cp_pt.vl["ESP_0x114"]["ESP_FltIndcn_AEB"]))
@@ -506,6 +510,7 @@ class CarState(CarStateBase):
     cur_wire = (fresh0 >> 2) & 0x3F
     cur_rflag = fresh0 & 0x3        # low 2 bits of the SecOC reset counter, ON THIS 0x1D0 frame
     self.oem_1d0_secoc_wire_ctr = cur_wire
+    self.oem_1d0_rflag = cur_rflag
     # Rebuild the full msg_counter that the EPS validates the MAC against. Only 6 bits are
     # on the wire; the high bits are a per-reset-window wrap count. full = wraps*64 + wire,
     # wraps zeroed when the window restarts and bumped on each 6-bit wire wrap (63 -> 0).

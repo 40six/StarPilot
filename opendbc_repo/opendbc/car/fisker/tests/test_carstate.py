@@ -106,9 +106,9 @@ def _acc_faulted_sequence(states, gear):
   return out
 
 
-@pytest.mark.parametrize("gear", [1, 3])  # park, reverse
+@pytest.mark.parametrize("gear", [1, 2, 3, 0])  # park, neutral, reverse, unknown (mid-shift)
 def test_acc_unavailable_in_park_and_reverse_is_not_a_fault(gear):
-  # ADAS 3.1.1 holds Failure_reversible the whole time the car is in P or R
+  # ADAS 3.1.1 holds Failure_reversible the whole time the car is out of a driving gear
   assert not any(_acc_faulted_sequence([9] * (ACC_FAULT_FRAMES * 3), gear))
 
 

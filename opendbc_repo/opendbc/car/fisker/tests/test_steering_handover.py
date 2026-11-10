@@ -213,9 +213,10 @@ def test_standstill_pauses_lateral(car):
   assert abs(candidate_angle(frames) - 10.0) < 2.0              # paused: holds measured, not 30
 
 
-def test_resume_from_pause_rearms_engage_delay(car):
+def test_resume_from_pause_holds_without_stopping_stream(car):
   # Coming out of a pause (override release or crossing the standstill speed) within an
-  # engaged session re-arms the engage delay, so we ease back in instead of yanking the wheel.
+  # engaged session eases back in with Req=0 for a hold, but KEEPS transmitting: stopping the
+  # stream handed the EPS back to OEM and the re-grab aborted it (AbortFb=8, 2026-11-09).
   cp, sp, cs = car
   controller = CarController(DBC[CAR.FISKER_OCEAN], cp)
   controller.FPCP = sp
@@ -228,8 +229,13 @@ def test_resume_from_pause_rearms_engage_delay(car):
   cs.out = structs.CarState(steeringAngleDeg=0.0, vEgoRaw=20.0)
   cs.eps_lat_sts = 2
   cc = structs.CarControl(latActive=True)
-  controller.update(cc.as_reader(), cs, 0)
-  assert controller.engage_delay_remaining >= controller.ENGAGE_DELAY_TICKS - 1
+  for tick in range(controller.RESUME_HOLD_TICKS + 2):
+    _, frames = controller.update(cc.as_reader(), cs, tick * 10_000_000)
+    messages = {addr: data for addr, data, bus in frames if bus == CANBUS.pt}
+    assert candidate_wires(frames), "the candidate stream must not stop during a resume"
+    assert controller.engage_delay_remaining == 0
+    req = (messages[0x1C0][3] >> 6) & 3
+    assert req == (0 if tick < controller.RESUME_HOLD_TICKS else 1), tick
 
 
 def test_settle_wait_holds_until_wheel_steadies(car):
@@ -254,7 +260,8 @@ def test_settle_wait_holds_until_wheel_steadies(car):
     controller.update(cc.as_reader(), cs, 0)
     ang -= 4.0
   assert controller._settle_hold > 0                                        # still waiting
-  assert controller.engage_delay_remaining >= controller.ENGAGE_DELAY_TICKS - 1   # still held
+  assert controller.resume_hold_remaining >= controller.RESUME_HOLD_TICKS - 1     # still held
+  assert controller.engage_delay_remaining == 0                             # ...without stopping TX
 
   for _ in range(5):                        # wheel steady now
     cs.out = structs.CarState(steeringAngleDeg=8.0, vEgoRaw=20.0)
@@ -381,3 +388,31 @@ def test_gw_reset_emits_low_counter_candidates(car):
   for _ in range(controller.POST_RESET_CAND_TICKS):
     _, frames = controller.update(cc.as_reader(), cs, 20_000_000)
   assert not any(w <= 11 for w in candidate_wires(frames) if w not in range(47 - 1, 47 + 11))
+
+
+def test_candidates_signed_for_oem_window_during_gw_reset_lag(car):
+  # GW_Syn_All announces a new reset counter ~10 ms before OEM's 0x1D0 restarts. During that lag
+  # the candidates for OEM's remaining old-window frames must carry OEM's reset flag and be signed
+  # with the old reset counter, or panda finds no match and the EPS aborts (AbortFb=8).
+  from opendbc.car.fisker.secoc import stamp_secoc
+  cp, sp, cs = car
+  controller = CarController(DBC[CAR.FISKER_OCEAN], cp)
+  controller.FPCP = sp
+  controller.secoc_key_verified = True
+  controller.secoc_key = key = bytes(range(16))
+  controller.always_on_lateral_enabled = True
+  controller.was_lat_engaged_prev = True
+  controller.was_lat_active_prev = True
+  controller.engage_delay_remaining = 0
+  cs.out = structs.CarState(steeringAngleDeg=0.0, vEgoRaw=20.0)
+  cs.secoc_trip, cs.secoc_reset = 1, 6          # GW already announced reset 6 (flag 2)...
+  cs.oem_1d0_rflag = 1                          # ...but OEM's 0x1D0 is still in window 5 (flag 1)
+  cs.oem_1d0_alive, cs.oem_1c0_alive = 3, 3
+  cs.oem_1d0_secoc_full_ctr = 98
+  cc = structs.CarControl(latActive=True)
+  _, frames = controller.update(cc.as_reader(), cs, 0)
+  cands = [data for addr, data, bus in frames if addr == LAT_CANDIDATE_ADDR and bus == LAT_CANDIDATE_BUS]
+  high = [d for d in cands if (d[4] >> 2) & 0x3F == 98 & 0x3F]
+  assert high and all(d[4] & 3 == 1 for d in high), "OEM's current frame needs a candidate in OEM's window"
+  d = high[0]
+  assert d == stamp_secoc(key, 0x1D0, d, 1, 5, 98), "signed with OEM's (old) reset counter"

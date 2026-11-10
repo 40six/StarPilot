@@ -128,6 +128,7 @@ class CarController(CarControllerBase):
     self._eps_was_active = False        # EPS reached Active this engagement (gates override recovery)
     self.was_lat_active_prev = False    # rising edge of lat_active within a session -> smooth re-entry
     self._settle_hold = 0               # ticks left to wait for the wheel to stop self-centering
+    self.resume_hold_remaining = 0      # ticks left holding Req=0 after a resume (still transmitting)
     self._prev_steer_angle = 0.0        # for the settle angle-rate check
     self._angle_override_latch = False  # measured wheel diverged far from command -> driver steering
 
@@ -176,6 +177,7 @@ class CarController(CarControllerBase):
     # hold (OEM ADAS is in Standby on this car, so it's just the keep-alive stream).
     self.engage_delay_remaining = 0
     self.ENGAGE_DELAY_TICKS = 25
+    self.RESUME_HOLD_TICKS = 25   # same 250 ms ease-in on a resume, but without stopping the stream
 
     # StarPilot Always On Lateral state, set by card.py each tick before apply()
     # (StarPilotCard.always_on_lateral_enabled). Replaces sunnypilot's CC_SP.mads.active.
@@ -273,30 +275,37 @@ class CarController(CarControllerBase):
                   and not standstill_pause and not self._angle_override_latch)
 
     # Smooth re-entry after any pause (driver override release, or crossing the standstill
-    # speed) while the session stays engaged: re-arm the engage delay so we don't snap. During
-    # the hold apply_angle_last re-seeds to the live wheel angle (see handoff seeding below)
-    # and the counters re-snap, so we pick up from where the wheel actually is and slew to the
-    # target rather than yanking it. The fresh-engage rising edge (below) handles the very
-    # first engage; this handles resumes within a session.
+    # speed) while the session stays engaged: hold Req=0 for RESUME_HOLD_TICKS (extended by the
+    # settle wait below) so we don't snap. We KEEP TRANSMITTING through the hold — the stream
+    # never stopped during the pause, so the EPS is still ours and the counters are continuous;
+    # apply_angle_last follows the wheel (target = measured while not active) and then slews to
+    # the model target. This used to re-arm the engage delay instead, which STOPPED the stream
+    # for 250 ms: panda dropped OEM 0x1D0 while the candidate pool was still armed, OEM fed the
+    # EPS, then we grabbed it back — and the re-grab aborted the EPS (AbortFb=8, "LKAS Fault")
+    # on-vehicle 2026-11-09 after a gas override. The fresh-engage rising edge (below) still
+    # uses the engage delay; this handles resumes within a session.
     resume_edge = lat_active and not self.was_lat_active_prev and self.was_lat_engaged_prev
     if resume_edge:
-      self.engage_delay_remaining = self.ENGAGE_DELAY_TICKS
+      self.resume_hold_remaining = self.RESUME_HOLD_TICKS
       self._settle_hold = SETTLE_MAX_TICKS
     # Settle wait: a fixed hold still grabbed a wheel that was still self-centering fast on
     # release, which fought the wheel — a jerk, a transient EPS abort ("steering temporarily
     # unavailable"), and the rate limiter saturating (a false "limit" alert). On-vehicle
     # 2026-10-26. So while settling, keep the hold extended as long as the wheel is still
-    # moving (> SETTLE_ANGLE_STEP deg/tick), and only let the engage delay run out and re-grab
-    # once it has steadied. Bounded by SETTLE_MAX_TICKS so it can't wait forever.
+    # moving (> SETTLE_ANGLE_STEP deg/tick), and only let the resume hold run out and steer
+    # again once it has steadied. Bounded by SETTLE_MAX_TICKS so it can't wait forever.
     ang = CS.out.steeringAngleDeg
     if self._settle_hold > 0:
       self._settle_hold -= 1
       if abs(ang - self._prev_steer_angle) > SETTLE_ANGLE_STEP:
-        self.engage_delay_remaining = self.ENGAGE_DELAY_TICKS
+        self.resume_hold_remaining = self.RESUME_HOLD_TICKS
       else:
         self._settle_hold = 0
     self._prev_steer_angle = ang
     self.was_lat_active_prev = lat_active
+    if self.resume_hold_remaining > 0:
+      self.resume_hold_remaining -= 1
+      lat_active = False   # Req=0 and follow the wheel, while still transmitting
 
     desired_angle_deg = float(actuators.steeringAngleDeg)
     # Rate limiting through the handover (see apply_fisker_steer_angle_limits): on a
@@ -516,14 +525,21 @@ class CarController(CarControllerBase):
       # (observed on-vehicle 2026-10-25). Panda buffers by wire index (counter & 0x3F), so
       # the low set lands in different slots from the high set and never collides; we re-emit
       # each tick and panda keeps the freshest, so the exact reset-landing frame is covered.
+      # Sign the window around OEM's counter with the reset counter OEM's 0x1D0 is still using:
+      # GW_Syn_All announces a new reset ~10 ms before 0x1D0 restarts, and candidates signed for
+      # the new window then match none of OEM's last old-window frames, so panda drops them
+      # (EPS AbortFb=8 on-vehicle 2026-11-09, 7 ms before a 0x1D0 restart). The post-reset low
+      # candidates are for the new window, so they keep the newest reset.
+      oem_reset = next((r for r in (reset, reset - 1, reset + 1) if (r & 0x3) == CS.oem_1d0_rflag), reset)
+      cand = [(secoc_k, alive_k, oem_reset) for secoc_k, alive_k in cand]
       if self._post_reset_cand_ticks > 0:
         self._post_reset_cand_ticks -= 1
-        cand += [(j, (oem_alive + j) % 15) for j in range(1, LAT_CANDIDATE_WINDOW + 1)]
-      for secoc_k, alive_k in cand:
+        cand += [(j, (oem_alive + j) % 15, reset) for j in range(1, LAT_CANDIDATE_WINDOW + 1)]
+      for secoc_k, alive_k, cand_reset in cand:
         if secoc_k < 1:
           continue  # counter restarts at 1 each window; <1 is never what the EPS expects
         steer_msg = self.fcan.create_steering_control(self.apply_angle_last, alive_k)
-        _addr, stamped, _bus = self._stamp(steer_msg, STEER_CAN_ID, trip, reset, secoc_k)
+        _addr, stamped, _bus = self._stamp(steer_msg, STEER_CAN_ID, trip, cand_reset, secoc_k)
         can_sends.append((LAT_CANDIDATE_ADDR, stamped, LAT_CANDIDATE_BUS))
       can_sends.append(self.fcan.create_lat_control(lat_active_wire, self.alive_1c0,
                                                     driver_override=CS.driver_intervening,
