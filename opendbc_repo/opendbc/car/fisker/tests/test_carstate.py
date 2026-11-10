@@ -117,6 +117,35 @@ def test_acc_deactivation_blip_is_not_a_fault():
   assert not any(_acc_faulted_sequence([3, 7, 10, 10, 2, 2], gear=4))
 
 
+def _available_sequence(states, gear=4):
+  CP = CarInterface.get_non_essential_params(CAR.FISKER_OCEAN)
+  CS = CarState(CP, custom.StarPilotCarParams.new_message())
+  parsers = CS.get_can_parsers(CP)
+  packer = CANPacker(DBC[CAR.FISKER_OCEAN][Bus.pt])
+  out = []
+  for acc_state in states:
+    frames = [packer.make_can_msg("ADAS_0x313", CANBUS.cam, {"ADAS_Sts_ACC_ICC": acc_state}),
+              packer.make_can_msg("VCU_0x214", CANBUS.pt, {"VCU_GearSig": gear})]
+    for cp in parsers.values():
+      cp.update([(0, frames)])
+    ret, _ = CS.update(parsers, None)
+    out.append(ret.cruiseState.available)
+  return out
+
+
+def test_deactivation_blip_keeps_cruise_available():
+  # Main-cruise Always On Lateral follows cruiseState.available every frame; the ADAS's Failure
+  # blip on an ACC disengage must not end the lateral session.
+  assert all(_available_sequence([3, 8, 10, 10, 10, 2, 2]))
+
+
+def test_persistent_failure_and_off_are_not_available():
+  out = _available_sequence([3] + [10] * (ACC_FAULT_FRAMES + 5))
+  assert all(out[:ACC_FAULT_FRAMES]) and not any(out[ACC_FAULT_FRAMES + 1:])
+  assert _available_sequence([0, 10, 10]) == [False, False, False]        # failure after Off: not a blip
+  assert _available_sequence([3, 10, 10], gear=1) == [True, False, False]  # Park: ACC unavailable
+
+
 @pytest.mark.parametrize("acc_state", [9, 10])
 def test_persistent_acc_failure_in_drive_is_a_fault(acc_state):
   out = _acc_faulted_sequence([acc_state] * ACC_FAULT_FRAMES, gear=4)

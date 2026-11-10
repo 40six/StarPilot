@@ -164,13 +164,35 @@ static bool fisker_cc_available(int cc_state) {
   return (cc_state != 0) && (cc_state != 1) && (cc_state != 9) && (cc_state != 10);
 }
 
+// ADAS 3.1.1 passes through Failure (9/10) for 20-160 ms on every ACC deactivation before it
+// settles at Standby. Treating that blip as "ACC main off" dropped aol_allowed together with
+// controls_allowed, so every steering candidate failed the angle check, panda dropped OEM 0x1D0
+// and the EPS aborted (AbortFb=8, "LKAS Fault" at each ACC disengage, on-vehicle 2026-11-10).
+// A failure state reached straight from an available one keeps ACC main on for this long
+// (matches carstate's ACC_FAULT_FRAMES); Off/Init still drop it immediately.
+#define FISKER_ACC_FAIL_GRACE_US 500000U
+static uint32_t fisker_acc_avail_ts = 0U;
+static bool fisker_acc_avail_seen = false;
+
 static void fisker_update_cruise(void) {
   pcm_cruise_check(fisker_cc_engaged(fisker_adas_cc_state, true) || fisker_cc_engaged(fisker_vcu_cc_state, false));
 
   // StarPilot AOL: ACC main is "on" whenever either cruise reports Standby or above.
   // Mirrors carstate's cruiseState.available. Dropping out also clears the LKAS-button
   // AOL latch so the next drive starts with lateral off.
-  acc_main_on = fisker_cc_available(fisker_adas_cc_state) || fisker_cc_available(fisker_vcu_cc_state);
+  bool available = fisker_cc_available(fisker_adas_cc_state) || fisker_cc_available(fisker_vcu_cc_state);
+  bool adas_failing = (fisker_adas_cc_state == 9) || (fisker_adas_cc_state == 10);
+  uint32_t now = microsecond_timer_get();
+  if (available) {
+    fisker_acc_avail_ts = now;
+    fisker_acc_avail_seen = true;
+  } else if (!adas_failing) {
+    fisker_acc_avail_seen = false;
+  } else {
+  }
+  bool fail_grace = adas_failing && fisker_acc_avail_seen &&
+                    (safety_get_ts_elapsed(now, fisker_acc_avail_ts) < FISKER_ACC_FAIL_GRACE_US);
+  acc_main_on = available || fail_grace;
   if (!acc_main_on) {
     lkas_on = false;
   }
@@ -485,6 +507,8 @@ static safety_config fisker_init(uint16_t param) {
   fisker_longitudinal = GET_FLAG(param, FISKER_FLAG_LONGITUDINAL_CONTROL);
   fisker_adas_cc_state = 0;
   fisker_vcu_cc_state = 0;
+  fisker_acc_avail_ts = 0U;
+  fisker_acc_avail_seen = false;
 
   // Initialise the ICC relay tracker. Seeding to "now" opens its window immediately so
   // the OEM's first bus-0 frame can't race openpilot's spoof — openpilot is already

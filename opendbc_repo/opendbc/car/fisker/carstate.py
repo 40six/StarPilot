@@ -225,8 +225,9 @@ class CarState(CarStateBase):
     self._torque_override_latch = False
     self._torque_override_release_frames = 0
 
-    # Consecutive frames of ADAS ACC failure outside P/R (see ACC_FAULT_FRAMES).
+    # Consecutive frames of ADAS ACC failure in a driving gear (see ACC_FAULT_FRAMES).
     self._acc_fault_frames = 0
+    self._acc_was_available = False   # ADAS ACC available last frame (a failure blip must follow it)
 
     # Button state edge detection
     self._prev_button_state = dict.fromkeys(BUTTON_SIGNAL_TO_TYPE, 0)
@@ -451,7 +452,15 @@ class CarState(CarStateBase):
     vcu_cc_speed = 0.0 if vcu_cc_disp >= 255 else vcu_cc_disp * icc_to_ms
 
     adas_enabled = cc_state in (3, 4, 5, 6, 11)
-    adas_available = cc_state not in (0, 1, 9, 10)
+    # The ADAS's Failure blip on every ACC deactivation (see the fault section below) counts as
+    # still available while it is shorter than ACC_FAULT_FRAMES: otherwise main-cruise Always On
+    # Lateral (which follows cruiseState.available each frame) ends the lateral session mid-
+    # handover. Panda keeps acc_main_on through the same blip (FISKER_ACC_FAIL_GRACE_US).
+    acc_failing = cc_state in (9, 10) and ret.gearShifter in ACC_DRIVING_GEARS
+    self._acc_fault_frames = self._acc_fault_frames + 1 if acc_failing else 0
+    acc_fail_blip = acc_failing and self._acc_fault_frames < ACC_FAULT_FRAMES and self._acc_was_available
+    adas_available = cc_state not in (0, 1, 9, 10) or acc_fail_blip
+    self._acc_was_available = adas_available
     vcu_enabled = vcu_cc_state in (3, 4)
     vcu_available = vcu_cc_state not in (0, 1, 9, 10)
     use_vcu = not adas_available and vcu_available
@@ -491,8 +500,7 @@ class CarState(CarStateBase):
     # it held through Neutral at a stop), and blips Failure_irreversible for 1-2 frames on every
     # ACC deactivation before settling back to Standby. Neither is a real fault, so the ADAS
     # state only counts in a driving gear once it has held for ACC_FAULT_FRAMES.
-    acc_failing = cc_state in (9, 10) and ret.gearShifter in ACC_DRIVING_GEARS
-    self._acc_fault_frames = self._acc_fault_frames + 1 if acc_failing else 0
+    # (_acc_fault_frames is counted in the cruise-state section above.)
     ret.accFaulted = (self._acc_fault_frames >= ACC_FAULT_FRAMES or vcu_cc_state in (9, 10) or
                       bool(cp_pt.vl["ESP_0x114"]["ESP_FltIndcn_AEB"]))
 

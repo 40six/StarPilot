@@ -288,8 +288,45 @@ class TestFiskerAlwaysOnLateral(unittest.TestCase):
   def test_acc_main_follows_adas_state(self):
     for state in range(12):
       with self.subTest(state=state):
+        self._acc(0)  # from Off, so a failure state isn't a deactivation blip
         self._acc(state)
         self.assertEqual(self.safety.get_acc_main_on(), state not in (0, 1, 9, 10))
+
+  def test_deactivation_failure_blip_keeps_acc_main(self):
+    # ADAS 3.1.1: Active -> Deactivation -> Failure (20-160 ms) -> Standby on every disengage.
+    # The blip must not drop ACC main (and with it AOL), or steering is cut mid-handover.
+    self.safety.set_timer(1_000_000)
+    for state in (3, 7, 10):
+      self._acc(state)
+      self.safety.safety_tick_current_safety_config()
+      self.assertTrue(self.safety.get_acc_main_on(), state)
+      self.assertTrue(self.safety.get_aol_allowed(), state)
+    self.safety.set_timer(1_150_000)
+    self._acc(10)
+    self.assertTrue(self.safety.get_acc_main_on())
+    self._acc(2)
+    self.assertTrue(self.safety.get_acc_main_on())
+
+  def test_persistent_failure_drops_acc_main(self):
+    self.safety.set_timer(1_000_000)
+    self._acc(3)
+    self._button(2)   # LKAS-button AOL latched on
+    self._button(0)
+    self.assertTrue(self.safety.get_lkas_on())
+    self._acc(10)
+    self.assertTrue(self.safety.get_acc_main_on())
+    self.safety.set_timer(1_600_000)   # still failing after the grace window
+    self._acc(10)
+    self.assertFalse(self.safety.get_acc_main_on())
+    self.assertFalse(self.safety.get_lkas_on())
+
+  def test_acc_off_drops_acc_main_immediately(self):
+    self.safety.set_timer(1_000_000)
+    self._acc(3)
+    self._acc(0)
+    self.assertFalse(self.safety.get_acc_main_on())
+    self._acc(10)   # failure after Off is not a deactivation blip
+    self.assertFalse(self.safety.get_acc_main_on())
 
   def test_lkas_long_press_toggles_only_with_acc_main(self):
     self._acc(0)
