@@ -416,3 +416,55 @@ def test_candidates_signed_for_oem_window_during_gw_reset_lag(car):
   assert high and all(d[4] & 3 == 1 for d in high), "OEM's current frame needs a candidate in OEM's window"
   d = high[0]
   assert d == stamp_secoc(key, 0x1D0, d, 1, 5, 98), "signed with OEM's (old) reset counter"
+
+
+def _comp_controller(car):
+  cp, sp, cs = car
+  controller = CarController(DBC[CAR.FISKER_OCEAN], cp)
+  controller.FPCP = sp
+  controller.secoc_key_verified = True
+  controller.secoc_key = bytes(16)
+  controller.always_on_lateral_enabled = True
+  controller.was_lat_engaged_prev = True
+  controller.was_lat_active_prev = True
+  controller.engage_delay_remaining = 0
+  cs.eps_lat_sts = 2
+  cs.driver_intervening = False
+  return controller, cs
+
+
+def _run_comp(controller, cs, ticks, meas=-1.0, desired=0.0, speed=25.0, pressed=False):
+  cs.out = structs.CarState(steeringAngleDeg=meas, vEgoRaw=speed, steeringPressed=pressed)
+  cc = structs.CarControl(latActive=True)
+  cc.actuators.steeringAngleDeg = desired
+  out = frames = None
+  for t in range(ticks):
+    out, frames = controller.update(cc.as_reader(), cs, t * 10_000_000)
+  return out, frames
+
+
+def test_angle_comp_learns_steady_tracking_gap(car):
+  # Wheel steadily 1 deg right of the command: the correction integrates the gap (1 deg per 10 s)
+  # and the transmitted angle carries it, while the reported output stays in the requested frame.
+  controller, cs = _comp_controller(car)
+  out, frames = _run_comp(controller, cs, 500)
+  assert controller.angle_comp == pytest.approx(0.5, abs=0.02)
+  assert candidate_angle(frames) == pytest.approx(controller.angle_comp, abs=0.1)
+  assert out.steeringAngleDeg == pytest.approx(0.0, abs=0.1)
+
+
+@pytest.mark.parametrize("kw", [dict(pressed=True), dict(speed=5.0), dict(meas=-12.0, desired=-11.0), dict(meas=-5.0)])
+def test_angle_comp_does_not_learn_outside_steady_steering(car, kw):
+  controller, cs = _comp_controller(car)
+  _run_comp(controller, cs, 300, **kw)
+  assert controller.angle_comp == 0.0
+
+
+def test_angle_comp_needs_active_eps_and_is_capped(car):
+  controller, cs = _comp_controller(car)
+  cs.eps_lat_sts = 1
+  _run_comp(controller, cs, 300)
+  assert controller.angle_comp == 0.0
+  cs.eps_lat_sts = 2
+  _run_comp(controller, cs, 3000, meas=-2.9)
+  assert controller.angle_comp == pytest.approx(2.0)   # ANGLE_COMP_MAX

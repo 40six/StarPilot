@@ -1,7 +1,7 @@
 import numpy as np
 
 from opendbc.can import CANPacker
-from opendbc.car import Bus, structs
+from opendbc.car import DT_CTRL, Bus, structs
 from opendbc.car.carlog import carlog
 from opendbc.car.interfaces import CarControllerBase
 from opendbc.car.lateral import apply_std_steer_angle_limits
@@ -58,6 +58,14 @@ LONG_CANDIDATE_LEAD = 1
 LONG_SUB_MAX_ACCEL_DELTA = 0.0
 LONG_SUB_MAX_DECEL_DELTA = 0.0
 
+# Steering angle tracking compensation (CarController._update_angle_comp).
+ANGLE_COMP_TAU_S = 10.0         # integration time constant: a 1 deg gap is learned in ~10 s
+ANGLE_COMP_MAX = 2.0            # deg, hard cap on the correction
+ANGLE_COMP_MIN_SPEED = 9.0      # m/s (~20 mph): learn only at speed
+ANGLE_COMP_MAX_ANGLE = 10.0     # deg: learn only near center (straight / gentle curves)
+ANGLE_COMP_MAX_ERROR = 3.0      # deg: ignore transients (turn-in, overrides)
+ANGLE_COMP_STEADY_STEP = 0.05   # deg per 10 ms tick: wheel must be steady
+
 
 def apply_fisker_steer_angle_limits(desired_angle, last_angle, speed, measured_angle, lat_active, controls_permitted):
   # Req=0 releases the EPS, but Panda still rate-checks 0x1D0 while ACC/MADS permits
@@ -111,6 +119,11 @@ class CarController(CarControllerBase):
 
     self.secoc_key_verified = False
     self.secoc_warn_logged = False
+
+    # Steering angle tracking compensation, learned per drive (see _update_angle_comp).
+    self.angle_comp = 0.0
+    self._comp_prev_angle = 0.0
+    self._comp_log_ticks = 0
 
     # "We ARE OEM" AliveCounter substitution: every OEM 0x1D0/0x1C0 tick that panda
     # blocks, we transmit a frame with the SAME AliveCounter that OEM would have sent —
@@ -197,6 +210,28 @@ class CarController(CarControllerBase):
     elif not self.secoc_warn_logged:
       carlog.error("Fisker SecOC key mismatch — GW sync MAC does not match stored SecOCKey")
       self.secoc_warn_logged = True
+
+  def _update_angle_comp(self, CS, desired_angle_deg: float, lat_active: bool) -> None:
+    """Learn the EPS's steady angle-tracking gap and fold it into the command.
+
+    The Ocean's EPS settles ~1 deg to the right of the commanded angle, at every speed (lane-bias
+    drive 2026-11-11: commanded - measured +1.01/+1.00/+0.99 deg at 25-45/45-60/60+ mph). The OEM
+    ADAS has the same gap and closes it itself (its own steady requests sit +1.4 deg above the
+    measured angle). openpilot's angle command has no feedback on that gap, so the car settled
+    ~0.4 m right of lane center. This integrates (desired - measured) while we are actively and
+    steadily steering near center, and adds it to the command: a slow integral on the angle
+    tracking error, capped so it can never become a large steering input.
+    """
+    meas = CS.out.steeringAngleDeg
+    steady = abs(meas - self._comp_prev_angle) < ANGLE_COMP_STEADY_STEP
+    self._comp_prev_angle = meas
+    error = desired_angle_deg - meas
+    if (lat_active and steady and CS.eps_lat_sts == 2 and not CS.out.steeringPressed and not CS.driver_intervening
+        and CS.out.vEgoRaw > ANGLE_COMP_MIN_SPEED and abs(meas) < ANGLE_COMP_MAX_ANGLE and abs(error) < ANGLE_COMP_MAX_ERROR):
+      self.angle_comp = float(np.clip(self.angle_comp + error * DT_CTRL / ANGLE_COMP_TAU_S, -ANGLE_COMP_MAX, ANGLE_COMP_MAX))
+      self._comp_log_ticks += 1
+      if self._comp_log_ticks % 1000 == 0:
+        carlog.info(f"Fisker angle comp {self.angle_comp:+.3f} deg (error {error:+.3f})")
 
   def _stamp(self, msg, can_id, trip, reset, msg_counter):
     """Fill the SecOC tail (fresh byte + MAC) of a packed frame with the relay's SecOC counter."""
@@ -308,13 +343,16 @@ class CarController(CarControllerBase):
       lat_active = False   # Req=0 and follow the wheel, while still transmitting
 
     desired_angle_deg = float(actuators.steeringAngleDeg)
+    self._update_angle_comp(CS, desired_angle_deg, lat_active)
+    angle_comp = self.angle_comp if lat_active else 0.0
     # Rate limiting through the handover (see apply_fisker_steer_angle_limits): on a
     # driver override or in the post-disengage fade, Req drops to 0 but 0x1D0 keeps
     # slewing to the measured angle at the normal rate while ACC or AOL still permits
     # control, so Panda's rate check keeps accepting the frames; with neither permission
-    # it carries the measured angle as the heartbeat.
+    # it carries the measured angle as the heartbeat. The tracking compensation rides inside
+    # the target, so it ramps in/out at the same rate limits Panda checks.
     self.apply_angle_last = apply_fisker_steer_angle_limits(
-      desired_angle_deg, self.apply_angle_last, CS.out.vEgoRaw,
+      desired_angle_deg + angle_comp, self.apply_angle_last, CS.out.vEgoRaw,
       CS.out.steeringAngleDeg, lat_active, engaged,
     )
 
@@ -640,7 +678,9 @@ class CarController(CarControllerBase):
     # only injects the steering command; the OEM keeps driving the cluster/HUD.
 
     new_actuators = actuators.as_builder()
-    new_actuators.steeringAngleDeg = self.apply_angle_last
+    # Report the output in the requested-angle frame (without the tracking compensation), so
+    # anything comparing actuators vs actuatorsOutput sees only real limiting.
+    new_actuators.steeringAngleDeg = self.apply_angle_last - angle_comp
 
     self.frame += 1
     return new_actuators, can_sends
