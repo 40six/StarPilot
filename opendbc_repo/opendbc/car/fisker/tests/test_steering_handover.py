@@ -3,8 +3,9 @@ import pytest
 from cereal import custom
 from opendbc.can import CANPacker
 from opendbc.car import Bus, structs
+import opendbc.car.fisker.carcontroller as ccmod
 from opendbc.car.fisker.carcontroller import (CarController, LAT_CANDIDATE_ADDR, LAT_CANDIDATE_BUS,
-                                              apply_fisker_steer_angle_limits)
+                                              apply_fisker_steer_angle_limits, load_angle_comp, save_angle_comp)
 from opendbc.car.fisker.carstate import CarState
 from opendbc.car.fisker.interface import CarInterface
 from opendbc.car.fisker.values import (ANGLE_OVERRIDE_DEG, ANGLE_OVERRIDE_RELEASE_DEG, CANBUS, CAR,
@@ -23,7 +24,8 @@ def candidate_angle(frames):
 
 
 @pytest.fixture
-def car():
+def car(monkeypatch):
+  monkeypatch.setattr(ccmod, "ANGLE_COMP_FILE", None)   # never read/write the device's learned value
   cp = CarInterface.get_non_essential_params(CAR.FISKER_OCEAN)
   cp.secOcKeyAvailable = True
   sp = custom.StarPilotCarParams.new_message()
@@ -468,3 +470,32 @@ def test_angle_comp_needs_active_eps_and_is_capped(car):
   cs.eps_lat_sts = 2
   _run_comp(controller, cs, 3000, meas=-2.9)
   assert controller.angle_comp == pytest.approx(2.0)   # ANGLE_COMP_MAX
+
+
+def test_angle_comp_persists_across_drives(car, monkeypatch):
+  # The learned value is saved while learning and a new controller (next drive) starts from it.
+  import os
+  import tempfile
+  path = os.path.join(tempfile.mkdtemp(), "fisker_angle_comp")
+  assert load_angle_comp(path) == 0.0                     # nothing saved yet
+  monkeypatch.setattr(ccmod, "ANGLE_COMP_FILE", path)
+  controller, cs = _comp_controller(car)
+  _run_comp(controller, cs, 1001)                         # 1000 learning ticks (tick 0 is not yet steady)
+  assert load_angle_comp(path) == pytest.approx(controller.angle_comp, abs=1e-3)
+  assert controller.angle_comp > 0.9
+  restarted = CarController(DBC[CAR.FISKER_OCEAN], car[0])
+  assert restarted.angle_comp == pytest.approx(controller.angle_comp, abs=1e-3)
+
+
+def test_angle_comp_file_is_validated():
+  import os
+  import tempfile
+  path = os.path.join(tempfile.mkdtemp(), "fisker_angle_comp")
+  save_angle_comp(path, 7.5)
+  assert load_angle_comp(path) == 2.0                     # clamped to ANGLE_COMP_MAX
+  for junk in ("nan", "", "abc"):
+    with open(path, "w") as f:
+      f.write(junk)
+    assert load_angle_comp(path) == 0.0
+  assert load_angle_comp(None) == 0.0
+  save_angle_comp("/nonexistent-dir/x", 1.0)               # unwritable: ignored, no exception

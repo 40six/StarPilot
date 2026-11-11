@@ -1,3 +1,6 @@
+import math
+import os
+
 import numpy as np
 
 from opendbc.can import CANPacker
@@ -65,6 +68,34 @@ ANGLE_COMP_MIN_SPEED = 9.0      # m/s (~20 mph): learn only at speed
 ANGLE_COMP_MAX_ANGLE = 10.0     # deg: learn only near center (straight / gentle curves)
 ANGLE_COMP_MAX_ERROR = 3.0      # deg: ignore transients (turn-in, overrides)
 ANGLE_COMP_STEADY_STEP = 0.05   # deg per 10 ms tick: wheel must be steady
+# The learned value is carried across drives in this file (a new Params key would need a rebuilt
+# params library, which the prebuilt tree can't do). None disables load/save (tests).
+ANGLE_COMP_FILE: str | None = "/data/fisker_angle_comp"
+
+
+def load_angle_comp(path: str | None) -> float:
+  """Last learned compensation, clamped to the cap; 0 if missing or unreadable."""
+  if path is None:
+    return 0.0
+  try:
+    with open(path) as f:
+      value = float(f.read().strip())
+  except (OSError, ValueError):
+    return 0.0
+  return float(np.clip(value, -ANGLE_COMP_MAX, ANGLE_COMP_MAX)) if math.isfinite(value) else 0.0
+
+
+def save_angle_comp(path: str | None, value: float) -> None:
+  """Atomically store the learned compensation; failures are ignored (it is re-learned anyway)."""
+  if path is None:
+    return
+  try:
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+      f.write(f"{value:.4f}\n")
+    os.replace(tmp, path)
+  except OSError:
+    pass
 
 
 def apply_fisker_steer_angle_limits(desired_angle, last_angle, speed, measured_angle, lat_active, controls_permitted):
@@ -120,8 +151,10 @@ class CarController(CarControllerBase):
     self.secoc_key_verified = False
     self.secoc_warn_logged = False
 
-    # Steering angle tracking compensation, learned per drive (see _update_angle_comp).
-    self.angle_comp = 0.0
+    # Steering angle tracking compensation (see _update_angle_comp). Starts from the value learned
+    # on previous drives and keeps learning from there.
+    self.angle_comp = load_angle_comp(ANGLE_COMP_FILE)
+    carlog.info(f"Fisker angle comp start {self.angle_comp:+.3f} deg")
     self._comp_prev_angle = 0.0
     self._comp_log_ticks = 0
 
@@ -230,8 +263,9 @@ class CarController(CarControllerBase):
         and CS.out.vEgoRaw > ANGLE_COMP_MIN_SPEED and abs(meas) < ANGLE_COMP_MAX_ANGLE and abs(error) < ANGLE_COMP_MAX_ERROR):
       self.angle_comp = float(np.clip(self.angle_comp + error * DT_CTRL / ANGLE_COMP_TAU_S, -ANGLE_COMP_MAX, ANGLE_COMP_MAX))
       self._comp_log_ticks += 1
-      if self._comp_log_ticks % 1000 == 0:
+      if self._comp_log_ticks % 1000 == 0:   # ~every 10 s of learning
         carlog.info(f"Fisker angle comp {self.angle_comp:+.3f} deg (error {error:+.3f})")
+        save_angle_comp(ANGLE_COMP_FILE, self.angle_comp)
 
   def _stamp(self, msg, can_id, trip, reset, msg_counter):
     """Fill the SecOC tail (fresh byte + MAC) of a packed frame with the relay's SecOC counter."""
