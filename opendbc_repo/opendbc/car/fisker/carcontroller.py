@@ -72,6 +72,20 @@ ANGLE_COMP_STEADY_STEP = 0.05   # deg per 10 ms tick: wheel must be steady
 # params library, which the prebuilt tree can't do). None disables load/save (tests).
 ANGLE_COMP_FILE: str | None = "/data/fisker_angle_comp"
 
+# Follow-the-driver override: while the driver is overriding, keep the lateral request active and
+# move the target with the wheel instead of releasing the EPS. The old release (Req=0 until driver
+# torque < OVERRIDE_RELEASE_TORQUE) never resumed mid-curve: holding a curve without assist takes
+# 0.4-2.6 Nm (route 000000bd seg 20: paused 11.6 s, torque > 0.5 Nm 81% of it, EPS intervention bit
+# never set). With the EPS still holding the wheel where the driver put it, the driver needs little
+# torque, the override latch releases, and the target blends back to the model over FOLLOW_BLEND_S.
+# Creating this file turns it off (read at startup).
+FOLLOW_DRIVER_OFF_FILE: str | None = "/data/fisker_follow_driver_off"
+FOLLOW_BLEND_S = 1.0   # s to blend from the wheel position back to the model after an override
+
+
+def follow_driver_enabled(off_file: str | None) -> bool:
+  return off_file is None or not os.path.exists(off_file)
+
 
 def load_angle_comp(path: str | None) -> float:
   """Last learned compensation, clamped to the cap; 0 if missing or unreadable."""
@@ -225,6 +239,10 @@ class CarController(CarControllerBase):
     self.ENGAGE_DELAY_TICKS = 25
     self.RESUME_HOLD_TICKS = 25   # same 250 ms ease-in on a resume, but without stopping the stream
 
+    self.follow_driver = follow_driver_enabled(FOLLOW_DRIVER_OFF_FILE)
+    self.follow_blend = 1.0       # 0 = target at the wheel (driver overriding) .. 1 = model target
+    carlog.info(f"Fisker follow-the-driver override {'on' if self.follow_driver else 'off'}")
+
     # StarPilot Always On Lateral state, set by card.py each tick before apply()
     # (StarPilotCard.always_on_lateral_enabled). Replaces sunnypilot's CC_SP.mads.active.
     self.always_on_lateral_enabled = False
@@ -340,8 +358,10 @@ class CarController(CarControllerBase):
       self._angle_override_latch = True
     elif angle_diverge < ANGLE_OVERRIDE_RELEASE_DEG:
       self._angle_override_latch = False
-    lat_active = (CC.latActive and secoc_ok and not CS.driver_intervening
+    # With follow-the-driver on, a driver override no longer drops the request (see FOLLOW_DRIVER_OFF_FILE).
+    lat_active = (CC.latActive and secoc_ok and (self.follow_driver or not CS.driver_intervening)
                   and not standstill_pause and not self._angle_override_latch)
+    following = lat_active and CS.driver_intervening
 
     # Smooth re-entry after any pause (driver override release, or crossing the standstill
     # speed) while the session stays engaged: hold Req=0 for RESUME_HOLD_TICKS (extended by the
@@ -379,6 +399,14 @@ class CarController(CarControllerBase):
     desired_angle_deg = float(actuators.steeringAngleDeg)
     self._update_angle_comp(CS, desired_angle_deg, lat_active)
     angle_comp = self.angle_comp if lat_active else 0.0
+    # Follow-the-driver: during an override the target is the wheel itself (the EPS holds it where
+    # the driver puts it instead of pulling back); afterwards it blends back to the model target.
+    if following:
+      self.follow_blend = 0.0
+    elif self.follow_blend < 1.0:
+      self.follow_blend = min(1.0, self.follow_blend + DT_CTRL / FOLLOW_BLEND_S)
+    meas_angle = CS.out.steeringAngleDeg
+    target_angle = meas_angle + self.follow_blend * (desired_angle_deg + angle_comp - meas_angle)
     # Rate limiting through the handover (see apply_fisker_steer_angle_limits): on a
     # driver override or in the post-disengage fade, Req drops to 0 but 0x1D0 keeps
     # slewing to the measured angle at the normal rate while ACC or AOL still permits
@@ -386,7 +414,7 @@ class CarController(CarControllerBase):
     # it carries the measured angle as the heartbeat. The tracking compensation rides inside
     # the target, so it ramps in/out at the same rate limits Panda checks.
     self.apply_angle_last = apply_fisker_steer_angle_limits(
-      desired_angle_deg + angle_comp, self.apply_angle_last, CS.out.vEgoRaw,
+      target_angle, self.apply_angle_last, CS.out.vEgoRaw,
       CS.out.steeringAngleDeg, lat_active, engaged,
     )
 

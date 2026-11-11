@@ -26,6 +26,7 @@ def candidate_angle(frames):
 @pytest.fixture
 def car(monkeypatch):
   monkeypatch.setattr(ccmod, "ANGLE_COMP_FILE", None)   # never read/write the device's learned value
+  monkeypatch.setattr(ccmod, "FOLLOW_DRIVER_OFF_FILE", None)   # follow-the-driver on, whatever the device has
   cp = CarInterface.get_non_essential_params(CAR.FISKER_OCEAN)
   cp.secOcKeyAvailable = True
   sp = custom.StarPilotCarParams.new_message()
@@ -35,9 +36,14 @@ def car(monkeypatch):
 
 @pytest.mark.parametrize('last,measured,speed', [(-1.8125, 3.3125, 18.52), (18.875, 11.6875, 18.78), (46.875, 41.25, 10.4)])
 @pytest.mark.parametrize('cruise', [False, True])
-def test_override_releases_immediately_without_angle_jump(car, last, measured, speed, cruise):
+@pytest.mark.parametrize('follow', [False, True])
+def test_override_releases_immediately_without_angle_jump(car, last, measured, speed, cruise, follow):
+  # Follow off: the override drops Req at once. Follow on: Req stays active and the angle starts
+  # moving toward the wheel. Either way there's no jump, and the override bit is signalled.
   cp, sp, cs = car
   controller = CarController(DBC[CAR.FISKER_OCEAN], cp)
+  controller.follow_driver = follow
+  controller.was_lat_active_prev = True   # steering was active when the override started
   controller.FPCP = sp
   controller.secoc_key_verified = True
   controller.secoc_key = bytes(16)  # synthetic key, no vehicle credentials
@@ -51,7 +57,7 @@ def test_override_releases_immediately_without_angle_jump(car, last, measured, s
   controller.always_on_lateral_enabled = True  # StarPilot AOL session (was MADS active)
   _, frames = controller.update(cc.as_reader(), cs, 0)
   messages = {addr: data for addr, data, bus in frames if bus == CANBUS.pt}
-  assert (messages[0x1C0][3] >> 6) & 3 == 0
+  assert (messages[0x1C0][3] >> 6) & 3 == (1 if follow else 0)
   assert messages[0x1C0][2] & 32  # override remains signalled
   assert 0x1D0 not in messages  # the angle reaches the EPS only through panda's candidate substitution
   sent_angle = candidate_angle(frames)
@@ -499,3 +505,45 @@ def test_angle_comp_file_is_validated():
     assert load_angle_comp(path) == 0.0
   assert load_angle_comp(None) == 0.0
   save_angle_comp("/nonexistent-dir/x", 1.0)               # unwritable: ignored, no exception
+
+
+def test_follow_driver_keeps_request_and_tracks_wheel(car):
+  # Driver overriding in a curve: the request stays active, the target follows the wheel (no
+  # pulling back toward the model), and there is no stream stop or resume hold afterwards.
+  controller, cs = _comp_controller(car)
+  cs.out = structs.CarState(steeringAngleDeg=0.0, vEgoRaw=25.0)
+  cc = structs.CarControl(latActive=True)
+  cc.actuators.steeringAngleDeg = 0.0
+  controller.update(cc.as_reader(), cs, 0)
+
+  cs.driver_intervening = True
+  cs.out = structs.CarState(steeringAngleDeg=-6.0, vEgoRaw=25.0)   # driver steers 6 deg right of the model
+  for t in range(100):
+    _, frames = controller.update(cc.as_reader(), cs, t * 10_000_000)
+    messages = {addr: data for addr, data, bus in frames if bus == CANBUS.pt}
+    assert (messages[0x1C0][3] >> 6) & 3 == 1, t        # still requesting
+    assert candidate_wires(frames), t                    # still transmitting
+  assert controller.follow_blend == 0.0
+  assert candidate_angle(frames) == pytest.approx(-6.0, abs=0.2)   # holding where the driver put it
+
+  cs.driver_intervening = False                          # driver relaxes
+  for t in range(50):
+    _, frames = controller.update(cc.as_reader(), cs, (100 + t) * 10_000_000)
+  assert controller.resume_hold_remaining == 0
+  assert controller.engage_delay_remaining == 0
+  assert 0.45 < controller.follow_blend < 0.55           # halfway through the 1 s blend
+  assert -4.5 < candidate_angle(frames) < -1.5            # heading back toward the model (0 deg)
+  for t in range(60):
+    _, frames = controller.update(cc.as_reader(), cs, (150 + t) * 10_000_000)
+  assert controller.follow_blend == 1.0
+  assert candidate_angle(frames) == pytest.approx(0.0, abs=0.3)
+
+
+def test_follow_driver_off_switch(monkeypatch):
+  import os
+  import tempfile
+  off = os.path.join(tempfile.mkdtemp(), "fisker_follow_driver_off")
+  assert ccmod.follow_driver_enabled(off)
+  open(off, "w").close()
+  assert not ccmod.follow_driver_enabled(off)
+  assert ccmod.follow_driver_enabled(None)
