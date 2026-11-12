@@ -89,8 +89,20 @@ FOLLOW_BLEND_S = 1.0   # s to blend from the wheel position back to the model af
 # driver torque, capped): just tracking the measured angle made the EPS hold every position until
 # the driver dragged it on, which felt heavy (on-vehicle 2026-11-12). The lead acts like power
 # assist and is self-limiting: as the wheel moves the driver's way, the driver's torque drops.
-FOLLOW_TORQUE_GAIN = 1.5   # deg / Nm
-FOLLOW_LEAD_MAX = 5.0      # deg
+# A flat 1.5 deg/Nm with a 5 deg cap over-steered on driver input (on-vehicle 2026-11-12): the
+# lead now shrinks with speed, starts above a deadband (resting hands; column torque also carries
+# some motor reaction), and is capped lower.
+FOLLOW_TORQUE_GAIN_BP = [5., 15., 30.]       # m/s
+FOLLOW_TORQUE_GAIN_V = [1.0, 0.6, 0.35]      # deg / Nm above the deadband
+FOLLOW_TORQUE_DEADBAND = 0.5                 # Nm
+FOLLOW_LEAD_MAX = 3.0                        # deg
+
+
+def follow_lead(torque: float, speed: float) -> float:
+  """Target lead (deg, + = left) for driver torque (Nm, + = left) while following the driver."""
+  excess = max(abs(torque) - FOLLOW_TORQUE_DEADBAND, 0.0)
+  lead = excess * float(np.interp(speed, FOLLOW_TORQUE_GAIN_BP, FOLLOW_TORQUE_GAIN_V))
+  return math.copysign(min(lead, FOLLOW_LEAD_MAX), torque)
 
 
 def follow_driver_enabled(off_file: str | None) -> bool:
@@ -426,7 +438,7 @@ class CarController(CarControllerBase):
     if following:
       # steeringTorque and steeringAngleDeg share a sign (+ = CCW / left), so this leads the wheel
       # the way the driver is turning it.
-      meas_angle += float(np.clip(FOLLOW_TORQUE_GAIN * CS.out.steeringTorque, -FOLLOW_LEAD_MAX, FOLLOW_LEAD_MAX))
+      meas_angle += follow_lead(CS.out.steeringTorque, CS.out.vEgoRaw)
     target_angle = meas_angle + self.follow_blend * (desired_angle_deg + angle_comp - meas_angle)
     # Rate limiting through the handover (see apply_fisker_steer_angle_limits): on a
     # driver override or in the post-disengage fade, Req drops to 0 but 0x1D0 keeps

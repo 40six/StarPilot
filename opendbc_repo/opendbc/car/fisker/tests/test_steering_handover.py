@@ -567,13 +567,23 @@ def test_angle_comp_pauses_around_overrides_and_curves(car):
 
 
 def test_follow_driver_leads_in_push_direction(car):
-  # While following, the target leads the wheel the way the driver pushes (power-assist feel),
-  # proportional to torque and capped.
+  # While following, the target leads the wheel the way the driver pushes (power-assist feel):
+  # torque above the deadband x the speed-scaled gain (0.6 deg/Nm at 15 m/s), capped.
   controller, cs = _comp_controller(car)
   cc = structs.CarControl(latActive=True)
   cs.driver_intervening = True
-  for torque, expected in ((-2.0, -6.0 - 3.0), (+1.0, -6.0 + 1.5), (-8.0, -6.0 - ccmod.FOLLOW_LEAD_MAX)):
+  for torque, expected in ((-2.0, -6.0 - 0.9), (+1.0, -6.0 + 0.3), (-8.0, -6.0 - ccmod.FOLLOW_LEAD_MAX)):
     cs.out = structs.CarState(steeringAngleDeg=-6.0, vEgoRaw=15.0, steeringTorque=torque)
     for t in range(200):
       _, frames = controller.update(cc.as_reader(), cs, t * 10_000_000)
     assert candidate_angle(frames) == pytest.approx(expected, abs=0.2), torque
+
+
+def test_follow_lead_deadband_speed_scaling_and_cap():
+  lead = ccmod.follow_lead
+  assert lead(0.4, 15.0) == 0.0 and lead(-0.4, 15.0) == 0.0          # resting hands: no lead
+  assert lead(2.0, 5.0) == pytest.approx(1.5 * 1.0)                    # low speed: 1.0 deg/Nm
+  assert lead(2.0, 30.0) == pytest.approx(1.5 * 0.35)                  # highway: 0.35 deg/Nm
+  assert lead(-2.0, 30.0) == pytest.approx(-1.5 * 0.35)                # sign follows the push
+  assert lead(8.0, 5.0) == ccmod.FOLLOW_LEAD_MAX                       # capped
+  assert abs(lead(2.0, 30.0)) < abs(lead(2.0, 15.0)) < abs(lead(2.0, 5.0))
