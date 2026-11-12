@@ -92,8 +92,8 @@ FOLLOW_BLEND_S = 1.0   # s to blend from the wheel position back to the model af
 # A flat 1.5 deg/Nm with a 5 deg cap over-steered on driver input (on-vehicle 2026-11-12): the
 # lead now shrinks with speed, starts above a deadband (resting hands; column torque also carries
 # some motor reaction), and is capped lower.
-FOLLOW_TORQUE_GAIN_BP = [5., 15., 30.]       # m/s
-FOLLOW_TORQUE_GAIN_V = [1.0, 0.6, 0.35]      # deg / Nm above the deadband
+FOLLOW_TORQUE_GAIN_BP = [5., 15., 25., 30.]  # m/s
+FOLLOW_TORQUE_GAIN_V = [1.0, 0.6, 0.25, 0.15]  # deg / Nm above the deadband (highway cut 2026-11-12: still too much lead)
 FOLLOW_TORQUE_DEADBAND = 0.5                 # Nm
 FOLLOW_LEAD_MAX = 3.0                        # deg
 

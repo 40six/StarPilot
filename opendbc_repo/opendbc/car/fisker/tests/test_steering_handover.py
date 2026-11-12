@@ -583,7 +583,7 @@ def test_follow_lead_deadband_speed_scaling_and_cap():
   lead = ccmod.follow_lead
   assert lead(0.4, 15.0) == 0.0 and lead(-0.4, 15.0) == 0.0          # resting hands: no lead
   assert lead(2.0, 5.0) == pytest.approx(1.5 * 1.0)                    # low speed: 1.0 deg/Nm
-  assert lead(2.0, 30.0) == pytest.approx(1.5 * 0.35)                  # highway: 0.35 deg/Nm
-  assert lead(-2.0, 30.0) == pytest.approx(-1.5 * 0.35)                # sign follows the push
+  assert lead(2.0, 30.0) == pytest.approx(1.5 * 0.15)                  # highway: 0.15 deg/Nm
+  assert lead(-2.0, 30.0) == pytest.approx(-1.5 * 0.15)                # sign follows the push
   assert lead(8.0, 5.0) == ccmod.FOLLOW_LEAD_MAX                       # capped
   assert abs(lead(2.0, 30.0)) < abs(lead(2.0, 15.0)) < abs(lead(2.0, 5.0))
