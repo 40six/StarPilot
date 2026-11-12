@@ -34,6 +34,12 @@ class CarInterface(CarInterfaceBase):
     # is larger) even though the car was tracking fine. 2.0 s requires a genuinely sustained
     # saturation. Advisory only -- does not change steering behavior or any safety limit.
     ret.steerLimitTimer = 2.0
+    # Low-speed wiggle (route 000000ca): below ~6 m/s the model's desired curvature itself
+    # oscillates at ~1 Hz (~0.37 1/km rms -> ~0.9 deg of wheel), and the EPS tracks it faithfully
+    # (wheel and command oscillate together). Same remedy as Rivian/Subaru: smooth the model's
+    # curvature at low speed, tapering 0.4 s at <=2 m/s to 0 at 8 m/s. The smoothing time is
+    # added to the lateral delay, so the model looks that much further ahead and adds no lag.
+    ret.lateralSmoothSeconds = 0.4
     ret.steerAtStandstill = True
 
     # SecOC is mandatory on Ocean. The 16-byte AES key must be in params under "SecOCKey".

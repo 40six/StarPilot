@@ -43,3 +43,13 @@ def test_subaru_uses_low_speed_configured_smoothing(v_ego, expected):
 ])
 def test_rivian_uses_configured_smoothing(v_ego, maximum, expected):
   assert get_car_lateral_smooth_seconds("rivian", v_ego, maximum) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(("v_ego", "expected"), [
+  (0.0, 0.4),
+  (5.0, 0.2),
+  (8.0, 0.0),
+  (30.0, 0.0),
+])
+def test_fisker_uses_low_speed_configured_smoothing(v_ego, expected):
+  assert get_car_lateral_smooth_seconds("fisker", v_ego, 0.4) == pytest.approx(expected)

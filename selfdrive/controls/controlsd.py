@@ -288,7 +288,7 @@ def update_twitch_guard(remaining: float, v_ego: float, standstill: bool) -> flo
 
 
 def get_control_lateral_smooth_seconds(brand: str, v_ego: float, vehicle_smooth_seconds: float) -> float:
-  if brand == "rivian" or (brand == "subaru" and vehicle_smooth_seconds > 0.0):
+  if brand == "rivian" or (brand in ("subaru", "fisker") and vehicle_smooth_seconds > 0.0):
     return get_car_lateral_smooth_seconds(brand, v_ego, vehicle_smooth_seconds)
   return LAT_SMOOTH_SECONDS
 

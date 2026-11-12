@@ -208,7 +208,7 @@ def get_lateral_smooth_seconds(v_ego: float, maximum: float = 0.0) -> float:
 
 
 def get_car_lateral_smooth_seconds(brand: str, v_ego: float, maximum: float) -> float:
-  if brand in ("rivian", "subaru"):
+  if brand in ("rivian", "subaru", "fisker"):
     return get_lateral_smooth_seconds(v_ego, maximum)
   return maximum
 
