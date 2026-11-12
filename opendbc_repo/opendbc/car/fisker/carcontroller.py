@@ -85,8 +85,16 @@ ANGLE_COMP_FILE: str | None = "/data/fisker_angle_comp"
 # Creating this file turns it off (read at startup).
 FOLLOW_DRIVER_OFF_FILE: str | None = "/data/fisker_follow_driver_off"
 FOLLOW_BLEND_S = 1.0   # s to blend from the wheel position back to the model after an override
-FOLLOW_TQ_START = 0.3  # Nm: driver authority starts above resting hands (~0.3 Nm hands-off floor)
-FOLLOW_TQ_FULL = 1.2   # Nm: full driver authority (the target is the wheel + lead)
+# Driver authority ramps over this torque band (0.3..1.2 Nm was too eager, 2026-11-12).
+FOLLOW_TQ_START = 0.6  # Nm: driver authority starts above resting hands
+FOLLOW_TQ_FULL = 2.0   # Nm: full driver authority (the target is the wheel + lead)
+# A hard push releases the request (normal power steering) before the EPS ends active control by
+# itself: in low-speed turns drivers pushed 3-6 Nm and the EPS went Active -> Available/Off with our
+# request still set (route 000000c9 segs 5-7), then took its own time to come back. Steering
+# resumes as soon as the driver eases below FOLLOW_RESUME_TQ, mid-turn, from the wheel position.
+FOLLOW_RELEASE_TQ = 2.5   # Nm
+FOLLOW_RESUME_TQ = 1.5    # Nm
+FOLLOW_RESUME_FRAMES = 20 # torque must stay below FOLLOW_RESUME_TQ this long (0.2 s)
 # While following, the target leads the wheel in the direction the driver pushes (deg per Nm of
 # driver torque, capped): just tracking the measured angle made the EPS hold every position until
 # the driver dragged it on, which felt heavy (on-vehicle 2026-11-12). The lead acts like power
@@ -95,7 +103,7 @@ FOLLOW_TQ_FULL = 1.2   # Nm: full driver authority (the target is the wheel + le
 # lead now shrinks with speed, starts above a deadband (resting hands; column torque also carries
 # some motor reaction), and is capped lower.
 FOLLOW_TORQUE_GAIN_BP = [5., 15., 25., 30.]  # m/s
-FOLLOW_TORQUE_GAIN_V = [1.0, 0.6, 0.25, 0.15]  # deg / Nm above the deadband (highway cut 2026-11-12: still too much lead)
+FOLLOW_TORQUE_GAIN_V = [0.6, 0.35, 0.15, 0.1]  # deg / Nm above the deadband (cut again 2026-11-12: still too much lead)
 FOLLOW_TORQUE_DEADBAND = 0.2                 # Nm (was 0.5: the lead kicked in with a jump)
 FOLLOW_LEAD_MAX = 3.0                        # deg
 
@@ -266,6 +274,9 @@ class CarController(CarControllerBase):
 
     self.follow_driver = follow_driver_enabled(FOLLOW_DRIVER_OFF_FILE)
     self.follow_blend = 1.0       # 0 = target at the wheel (driver overriding) .. 1 = model target
+    self.hard_override = False    # follow mode: driver pushing hard -> request released (see FOLLOW_RELEASE_TQ)
+    self._hard_override_prev = False
+    self._resume_tq_frames = 0
     carlog.info(f"Fisker follow-the-driver override {'on' if self.follow_driver else 'off'}")
 
     # StarPilot Always On Lateral state, set by card.py each tick before apply()
@@ -390,8 +401,26 @@ class CarController(CarControllerBase):
     elif angle_diverge < ANGLE_OVERRIDE_RELEASE_DEG:
       self._angle_override_latch = False
     # With follow-the-driver on, a driver override no longer drops the request (see FOLLOW_DRIVER_OFF_FILE).
-    lat_active = (CC.latActive and secoc_ok and (self.follow_driver or not CS.driver_intervening)
+    # Follow mode: only a hard push releases the request (hysteresis on driver torque).
+    driver_tq = abs(CS.out.steeringTorque)
+    if not self.follow_driver:
+      self.hard_override = False
+    elif driver_tq > FOLLOW_RELEASE_TQ:
+      self.hard_override = True
+      self._resume_tq_frames = 0
+    elif self.hard_override:
+      self._resume_tq_frames = self._resume_tq_frames + 1 if driver_tq < FOLLOW_RESUME_TQ else 0
+      if self._resume_tq_frames >= FOLLOW_RESUME_FRAMES:
+        self.hard_override = False
+    driver_released = self.hard_override if self.follow_driver else CS.driver_intervening
+    lat_active = (CC.latActive and secoc_ok and not driver_released
                   and not standstill_pause and not self._angle_override_latch)
+    # Coming out of a hard push: resume from the wheel (full driver authority, blending back over
+    # FOLLOW_BLEND_S) instead of the Req=0 resume hold.
+    hard_override_ended = self._hard_override_prev and not self.hard_override
+    self._hard_override_prev = self.hard_override
+    if hard_override_ended:
+      self.follow_blend = 0.0
 
     # Smooth re-entry after any pause (driver override release, or crossing the standstill
     # speed) while the session stays engaged: hold Req=0 for RESUME_HOLD_TICKS (extended by the
@@ -403,7 +432,7 @@ class CarController(CarControllerBase):
     # EPS, then we grabbed it back — and the re-grab aborted the EPS (AbortFb=8, "LKAS Fault")
     # on-vehicle 2026-11-09 after a gas override. The fresh-engage rising edge (below) still
     # uses the engage delay; this handles resumes within a session.
-    resume_edge = lat_active and not self.was_lat_active_prev and self.was_lat_engaged_prev
+    resume_edge = lat_active and not self.was_lat_active_prev and self.was_lat_engaged_prev and not hard_override_ended
     if resume_edge:
       self.resume_hold_remaining = self.RESUME_HOLD_TICKS
       self._settle_hold = SETTLE_MAX_TICKS
@@ -433,13 +462,12 @@ class CarController(CarControllerBase):
     # the driver puts it instead of pulling back); afterwards it blends back to the model target.
     # Driver authority (1 - follow_blend) rises with driver torque immediately and continuously
     # (FOLLOW_TQ_START .. FOLLOW_TQ_FULL), so the target starts yielding as soon as the driver leans
-    # on the wheel; the 3 Nm override latch / EPS intervention bit still force full authority. Waiting
-    # for the latch alone made the EPS hold the model's line at full stiffness until 3 Nm, then let
-    # go all at once: a delay, then a jump and an overcorrection (on-vehicle 2026-11-12). Authority
-    # decays back over FOLLOW_BLEND_S once the driver eases off.
+    # on the wheel (a hard push beyond that releases the request, see FOLLOW_RELEASE_TQ). Waiting
+    # for the 3 Nm override latch made the EPS hold the model's line at full stiffness until 3 Nm,
+    # then let go all at once: a delay, then a jump and an overcorrection (on-vehicle 2026-11-12).
+    # Authority decays back over FOLLOW_BLEND_S once the driver eases off.
     if self.follow_driver and lat_active:
-      authority = 1.0 if CS.driver_intervening else float(np.clip(
-        (abs(CS.out.steeringTorque) - FOLLOW_TQ_START) / (FOLLOW_TQ_FULL - FOLLOW_TQ_START), 0.0, 1.0))
+      authority = float(np.clip((driver_tq - FOLLOW_TQ_START) / (FOLLOW_TQ_FULL - FOLLOW_TQ_START), 0.0, 1.0))
     else:
       authority = 0.0
     self.follow_blend = min(1.0 - authority, self.follow_blend + DT_CTRL / FOLLOW_BLEND_S)
@@ -536,7 +564,8 @@ class CarController(CarControllerBase):
       self._override_eps_recovery = True
     if self._override_eps_recovery:
       tx_lateral = False   # de-assert so the EPS can clear its override latch
-      if lat_engaged and CS.eps_lat_sts != 0 and not CS.out.steeringPressed:
+      driver_let_go = (driver_tq < FOLLOW_RESUME_TQ) if self.follow_driver else not CS.out.steeringPressed
+      if lat_engaged and CS.eps_lat_sts != 0 and driver_let_go:
         self._override_eps_recovery = False
         self._eps_was_active = False
         self.engage_delay_remaining = self.ENGAGE_DELAY_TICKS

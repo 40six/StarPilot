@@ -304,6 +304,7 @@ def test_override_eps_off_deasserts_then_rearms(car):
   # Hard overpower drops the EPS to Off -> we must stop transmitting so it can reset.
   cs.eps_lat_sts = 0
   cs.out.steeringPressed = True
+  cs.out.steeringTorque = 3.0
   for _ in range(3):
     assert not candidates_present()
   assert controller._override_eps_recovery
@@ -315,6 +316,7 @@ def test_override_eps_off_deasserts_then_rearms(car):
 
   # EPS Available AND driver released -> re-arm the engage delay for a fresh handshake.
   cs.out.steeringPressed = False
+  cs.out.steeringTorque = 0.0
   controller.update(cc.as_reader(), cs, 0)
   assert not controller._override_eps_recovery
   assert controller.engage_delay_remaining == controller.ENGAGE_DELAY_TICKS
@@ -516,17 +518,17 @@ def test_follow_driver_keeps_request_and_tracks_wheel(car):
   cc.actuators.steeringAngleDeg = 0.0
   controller.update(cc.as_reader(), cs, 0)
 
-  cs.driver_intervening = True
-  cs.out = structs.CarState(steeringAngleDeg=-6.0, vEgoRaw=25.0)   # driver steers 6 deg right of the model
+  # driver steers 6 deg right of the model, with full-authority torque (below the hard-push release)
+  cs.out = structs.CarState(steeringAngleDeg=-6.0, vEgoRaw=25.0, steeringTorque=-2.2)
   for t in range(100):
     _, frames = controller.update(cc.as_reader(), cs, t * 10_000_000)
     messages = {addr: data for addr, data, bus in frames if bus == CANBUS.pt}
     assert (messages[0x1C0][3] >> 6) & 3 == 1, t        # still requesting
     assert candidate_wires(frames), t                    # still transmitting
   assert controller.follow_blend == 0.0
-  assert candidate_angle(frames) == pytest.approx(-6.0, abs=0.2)   # holding where the driver put it
+  assert candidate_angle(frames) == pytest.approx(-6.0 + ccmod.follow_lead(-2.2, 25.0), abs=0.2)   # at the wheel + lead
 
-  cs.driver_intervening = False                          # driver relaxes
+  cs.out = structs.CarState(steeringAngleDeg=-6.0, vEgoRaw=25.0)   # driver relaxes
   for t in range(50):
     _, frames = controller.update(cc.as_reader(), cs, (100 + t) * 10_000_000)
   assert controller.resume_hold_remaining == 0
@@ -556,7 +558,7 @@ def test_angle_comp_pauses_around_overrides_and_curves(car):
   cs.driver_intervening = True
   _run_comp(controller, cs, 50)
   cs.driver_intervening = False
-  _run_comp(controller, cs, 100 + ccmod.ANGLE_COMP_COOLDOWN_TICKS - 10)   # blend (1 s) + most of the cooldown
+  _run_comp(controller, cs, ccmod.ANGLE_COMP_COOLDOWN_TICKS - 10)   # most of the cooldown
   assert controller.angle_comp == 0.0
   _run_comp(controller, cs, 200)
   assert controller.angle_comp > 0.0
@@ -568,11 +570,10 @@ def test_angle_comp_pauses_around_overrides_and_curves(car):
 
 def test_follow_driver_leads_in_push_direction(car):
   # While following, the target leads the wheel the way the driver pushes (power-assist feel):
-  # torque above the deadband x the speed-scaled gain (0.6 deg/Nm at 15 m/s), capped.
+  # torque above the deadband x the speed-scaled gain (0.35 deg/Nm at 15 m/s).
   controller, cs = _comp_controller(car)
   cc = structs.CarControl(latActive=True)
-  cs.driver_intervening = True
-  for torque, expected in ((-2.0, -6.0 - 1.8 * 0.6), (+1.0, -6.0 + 0.8 * 0.6), (-8.0, -6.0 - ccmod.FOLLOW_LEAD_MAX)):
+  for torque, expected in ((-2.2, -6.0 - 2.0 * 0.35), (+2.2, -6.0 + 2.0 * 0.35)):
     cs.out = structs.CarState(steeringAngleDeg=-6.0, vEgoRaw=15.0, steeringTorque=torque)
     for t in range(200):
       _, frames = controller.update(cc.as_reader(), cs, t * 10_000_000)
@@ -582,9 +583,9 @@ def test_follow_driver_leads_in_push_direction(car):
 def test_follow_lead_deadband_speed_scaling_and_cap():
   lead = ccmod.follow_lead
   assert lead(0.15, 15.0) == 0.0 and lead(-0.15, 15.0) == 0.0        # below the deadband: no lead
-  assert lead(2.0, 5.0) == pytest.approx(1.8 * 1.0)                    # low speed: 1.0 deg/Nm
-  assert lead(2.0, 30.0) == pytest.approx(1.8 * 0.15)                  # highway: 0.15 deg/Nm
-  assert lead(-2.0, 30.0) == pytest.approx(-1.8 * 0.15)                # sign follows the push
+  assert lead(2.0, 5.0) == pytest.approx(1.8 * 0.6)                    # low speed: 0.6 deg/Nm
+  assert lead(2.0, 30.0) == pytest.approx(1.8 * 0.1)                   # highway: 0.1 deg/Nm
+  assert lead(-2.0, 30.0) == pytest.approx(-1.8 * 0.1)                 # sign follows the push
   assert lead(8.0, 5.0) == ccmod.FOLLOW_LEAD_MAX                       # capped
   assert abs(lead(2.0, 30.0)) < abs(lead(2.0, 15.0)) < abs(lead(2.0, 5.0))
 
@@ -606,3 +607,44 @@ def test_driver_authority_is_continuous_and_immediate(car):
   controller.follow_blend = 0.0
   controller.update(cc.as_reader(), cs, 0)
   assert controller.follow_blend == pytest.approx(0.01)
+
+
+def test_hard_push_releases_and_resumes_mid_turn(car):
+  # A hard push (> FOLLOW_RELEASE_TQ) releases the request before the EPS ends active control by
+  # itself; easing below FOLLOW_RESUME_TQ for FOLLOW_RESUME_FRAMES resumes at once, mid-turn, from
+  # the wheel (full driver authority, no Req=0 resume hold).
+  controller, cs = _comp_controller(car)
+  cc = structs.CarControl(latActive=True)
+  cc.actuators.steeringAngleDeg = 0.0
+
+  def req(torque, ticks):
+    cs.out = structs.CarState(steeringAngleDeg=-20.0, vEgoRaw=6.0, steeringTorque=torque)
+    for _ in range(ticks):
+      _, frames = controller.update(cc.as_reader(), cs, 0)
+    return (({a: d for a, d, b in frames if b == CANBUS.pt})[0x1C0][3] >> 6) & 3, frames
+
+  assert req(-1.0, 5)[0] == 1                          # leaning on it: still active (follow)
+  assert req(-3.5, 2)[0] == 0                          # hard push: released
+  assert req(-1.0, ccmod.FOLLOW_RESUME_FRAMES - 2)[0] == 0   # easing, not long enough yet
+  r, frames = req(-1.0, 3)
+  assert r == 1                                        # resumed mid-turn
+  assert controller.resume_hold_remaining == 0
+  assert controller.follow_blend < 0.1                 # starts from the wheel, blends back
+  assert candidate_wires(frames)
+
+
+def test_eps_recovery_resumes_on_low_torque_in_follow_mode(car):
+  # After the EPS drops to Off, follow mode re-arms once driver torque is below FOLLOW_RESUME_TQ
+  # (hands still on the wheel in a turn), not only once steeringPressed clears.
+  controller, cs = _comp_controller(car)
+  cc = structs.CarControl(latActive=True)
+  controller.update(cc.as_reader(), cs, 0)
+  controller._eps_was_active = True
+  cs.eps_lat_sts = 0
+  cs.out = structs.CarState(steeringAngleDeg=-20.0, vEgoRaw=6.0, steeringPressed=True, steeringTorque=1.2)
+  controller.update(cc.as_reader(), cs, 0)
+  assert controller._override_eps_recovery
+  cs.eps_lat_sts = 1
+  controller.update(cc.as_reader(), cs, 0)
+  assert not controller._override_eps_recovery
+  assert controller.engage_delay_remaining == controller.ENGAGE_DELAY_TICKS
