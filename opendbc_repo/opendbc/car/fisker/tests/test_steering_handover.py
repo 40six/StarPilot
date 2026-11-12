@@ -456,7 +456,7 @@ def test_angle_comp_learns_steady_tracking_gap(car):
   # and the transmitted angle carries it, while the reported output stays in the requested frame.
   controller, cs = _comp_controller(car)
   out, frames = _run_comp(controller, cs, 500)
-  assert controller.angle_comp == pytest.approx(0.5, abs=0.02)
+  assert controller.angle_comp == pytest.approx(0.25, abs=0.02)   # 1 deg gap, 20 s time constant, 5 s
   assert candidate_angle(frames) == pytest.approx(controller.angle_comp, abs=0.1)
   assert out.steeringAngleDeg == pytest.approx(0.0, abs=0.1)
 
@@ -474,8 +474,8 @@ def test_angle_comp_needs_active_eps_and_is_capped(car):
   _run_comp(controller, cs, 300)
   assert controller.angle_comp == 0.0
   cs.eps_lat_sts = 2
-  _run_comp(controller, cs, 3000, meas=-2.9)
-  assert controller.angle_comp == pytest.approx(2.0)   # ANGLE_COMP_MAX
+  _run_comp(controller, cs, 6000, meas=-2.9)
+  assert controller.angle_comp == pytest.approx(ccmod.ANGLE_COMP_MAX)
 
 
 def test_angle_comp_persists_across_drives(car, monkeypatch):
@@ -488,7 +488,7 @@ def test_angle_comp_persists_across_drives(car, monkeypatch):
   controller, cs = _comp_controller(car)
   _run_comp(controller, cs, 1001)                         # 1000 learning ticks (tick 0 is not yet steady)
   assert load_angle_comp(path) == pytest.approx(controller.angle_comp, abs=1e-3)
-  assert controller.angle_comp > 0.9
+  assert controller.angle_comp > 0.45
   restarted = CarController(DBC[CAR.FISKER_OCEAN], car[0])
   assert restarted.angle_comp == pytest.approx(controller.angle_comp, abs=1e-3)
 
@@ -498,7 +498,7 @@ def test_angle_comp_file_is_validated():
   import tempfile
   path = os.path.join(tempfile.mkdtemp(), "fisker_angle_comp")
   save_angle_comp(path, 7.5)
-  assert load_angle_comp(path) == 2.0                     # clamped to ANGLE_COMP_MAX
+  assert load_angle_comp(path) == ccmod.ANGLE_COMP_MAX    # clamped to the cap
   for junk in ("nan", "", "abc"):
     with open(path, "w") as f:
       f.write(junk)
@@ -547,3 +547,33 @@ def test_follow_driver_off_switch(monkeypatch):
   open(off, "w").close()
   assert not ccmod.follow_driver_enabled(off)
   assert ccmod.follow_driver_enabled(None)
+
+
+def test_angle_comp_pauses_around_overrides_and_curves(car):
+  # An override and the blend back are deliberate gaps: no learning during them or for 3 s after.
+  # Nor when the model asks for a real turn (only near-straight driving shows the EPS gap).
+  controller, cs = _comp_controller(car)
+  cs.driver_intervening = True
+  _run_comp(controller, cs, 50)
+  cs.driver_intervening = False
+  _run_comp(controller, cs, 100 + ccmod.ANGLE_COMP_COOLDOWN_TICKS - 10)   # blend (1 s) + most of the cooldown
+  assert controller.angle_comp == 0.0
+  _run_comp(controller, cs, 200)
+  assert controller.angle_comp > 0.0
+
+  controller, cs = _comp_controller(car)
+  _run_comp(controller, cs, 300, meas=7.0, desired=8.0)   # model asking for a curve
+  assert controller.angle_comp == 0.0
+
+
+def test_follow_driver_leads_in_push_direction(car):
+  # While following, the target leads the wheel the way the driver pushes (power-assist feel),
+  # proportional to torque and capped.
+  controller, cs = _comp_controller(car)
+  cc = structs.CarControl(latActive=True)
+  cs.driver_intervening = True
+  for torque, expected in ((-2.0, -6.0 - 3.0), (+1.0, -6.0 + 1.5), (-8.0, -6.0 - ccmod.FOLLOW_LEAD_MAX)):
+    cs.out = structs.CarState(steeringAngleDeg=-6.0, vEgoRaw=15.0, steeringTorque=torque)
+    for t in range(200):
+      _, frames = controller.update(cc.as_reader(), cs, t * 10_000_000)
+    assert candidate_angle(frames) == pytest.approx(expected, abs=0.2), torque

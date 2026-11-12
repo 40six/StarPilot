@@ -62,8 +62,12 @@ LONG_SUB_MAX_ACCEL_DELTA = 0.0
 LONG_SUB_MAX_DECEL_DELTA = 0.0
 
 # Steering angle tracking compensation (CarController._update_angle_comp).
-ANGLE_COMP_TAU_S = 10.0         # integration time constant: a 1 deg gap is learned in ~10 s
-ANGLE_COMP_MAX = 2.0            # deg, hard cap on the correction
+ANGLE_COMP_TAU_S = 20.0         # integration time constant: a 1 deg gap is learned in ~20 s
+# Cap: the measured gap was ~1.0 deg; at 2.0 the learned value crept to +1.56 over three drives
+# (2026-11-11/12) and the car hugged left of center and pulled back hard on right corrections.
+ANGLE_COMP_MAX = 1.2            # deg, hard cap on the correction
+ANGLE_COMP_MAX_DESIRED = 5.0    # deg: learn only when the model asks for near-straight
+ANGLE_COMP_COOLDOWN_TICKS = 300 # no learning during and for 3 s after a driver override / blend back
 ANGLE_COMP_MIN_SPEED = 9.0      # m/s (~20 mph): learn only at speed
 ANGLE_COMP_MAX_ANGLE = 10.0     # deg: learn only near center (straight / gentle curves)
 ANGLE_COMP_MAX_ERROR = 3.0      # deg: ignore transients (turn-in, overrides)
@@ -81,6 +85,12 @@ ANGLE_COMP_FILE: str | None = "/data/fisker_angle_comp"
 # Creating this file turns it off (read at startup).
 FOLLOW_DRIVER_OFF_FILE: str | None = "/data/fisker_follow_driver_off"
 FOLLOW_BLEND_S = 1.0   # s to blend from the wheel position back to the model after an override
+# While following, the target leads the wheel in the direction the driver pushes (deg per Nm of
+# driver torque, capped): just tracking the measured angle made the EPS hold every position until
+# the driver dragged it on, which felt heavy (on-vehicle 2026-11-12). The lead acts like power
+# assist and is self-limiting: as the wheel moves the driver's way, the driver's torque drops.
+FOLLOW_TORQUE_GAIN = 1.5   # deg / Nm
+FOLLOW_LEAD_MAX = 5.0      # deg
 
 
 def follow_driver_enabled(off_file: str | None) -> bool:
@@ -171,6 +181,7 @@ class CarController(CarControllerBase):
     carlog.info(f"Fisker angle comp start {self.angle_comp:+.3f} deg")
     self._comp_prev_angle = 0.0
     self._comp_log_ticks = 0
+    self._comp_cooldown = 0
 
     # "We ARE OEM" AliveCounter substitution: every OEM 0x1D0/0x1C0 tick that panda
     # blocks, we transmit a frame with the SAME AliveCounter that OEM would have sent —
@@ -277,7 +288,13 @@ class CarController(CarControllerBase):
     steady = abs(meas - self._comp_prev_angle) < ANGLE_COMP_STEADY_STEP
     self._comp_prev_angle = meas
     error = desired_angle_deg - meas
+    # A driver override and the blend back afterwards are deliberate gaps, not EPS tracking error.
+    if CS.driver_intervening or self.follow_blend < 1.0:
+      self._comp_cooldown = ANGLE_COMP_COOLDOWN_TICKS
+    elif self._comp_cooldown > 0:
+      self._comp_cooldown -= 1
     if (lat_active and steady and CS.eps_lat_sts == 2 and not CS.out.steeringPressed and not CS.driver_intervening
+        and self._comp_cooldown == 0 and abs(desired_angle_deg) < ANGLE_COMP_MAX_DESIRED
         and CS.out.vEgoRaw > ANGLE_COMP_MIN_SPEED and abs(meas) < ANGLE_COMP_MAX_ANGLE and abs(error) < ANGLE_COMP_MAX_ERROR):
       self.angle_comp = float(np.clip(self.angle_comp + error * DT_CTRL / ANGLE_COMP_TAU_S, -ANGLE_COMP_MAX, ANGLE_COMP_MAX))
       self._comp_log_ticks += 1
@@ -406,6 +423,10 @@ class CarController(CarControllerBase):
     elif self.follow_blend < 1.0:
       self.follow_blend = min(1.0, self.follow_blend + DT_CTRL / FOLLOW_BLEND_S)
     meas_angle = CS.out.steeringAngleDeg
+    if following:
+      # steeringTorque and steeringAngleDeg share a sign (+ = CCW / left), so this leads the wheel
+      # the way the driver is turning it.
+      meas_angle += float(np.clip(FOLLOW_TORQUE_GAIN * CS.out.steeringTorque, -FOLLOW_LEAD_MAX, FOLLOW_LEAD_MAX))
     target_angle = meas_angle + self.follow_blend * (desired_angle_deg + angle_comp - meas_angle)
     # Rate limiting through the handover (see apply_fisker_steer_angle_limits): on a
     # driver override or in the post-disengage fade, Req drops to 0 but 0x1D0 keeps
