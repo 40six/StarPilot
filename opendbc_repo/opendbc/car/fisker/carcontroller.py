@@ -85,6 +85,8 @@ ANGLE_COMP_FILE: str | None = "/data/fisker_angle_comp"
 # Creating this file turns it off (read at startup).
 FOLLOW_DRIVER_OFF_FILE: str | None = "/data/fisker_follow_driver_off"
 FOLLOW_BLEND_S = 1.0   # s to blend from the wheel position back to the model after an override
+FOLLOW_TQ_START = 0.3  # Nm: driver authority starts above resting hands (~0.3 Nm hands-off floor)
+FOLLOW_TQ_FULL = 1.2   # Nm: full driver authority (the target is the wheel + lead)
 # While following, the target leads the wheel in the direction the driver pushes (deg per Nm of
 # driver torque, capped): just tracking the measured angle made the EPS hold every position until
 # the driver dragged it on, which felt heavy (on-vehicle 2026-11-12). The lead acts like power
@@ -94,7 +96,7 @@ FOLLOW_BLEND_S = 1.0   # s to blend from the wheel position back to the model af
 # some motor reaction), and is capped lower.
 FOLLOW_TORQUE_GAIN_BP = [5., 15., 25., 30.]  # m/s
 FOLLOW_TORQUE_GAIN_V = [1.0, 0.6, 0.25, 0.15]  # deg / Nm above the deadband (highway cut 2026-11-12: still too much lead)
-FOLLOW_TORQUE_DEADBAND = 0.5                 # Nm
+FOLLOW_TORQUE_DEADBAND = 0.2                 # Nm (was 0.5: the lead kicked in with a jump)
 FOLLOW_LEAD_MAX = 3.0                        # deg
 
 
@@ -390,7 +392,6 @@ class CarController(CarControllerBase):
     # With follow-the-driver on, a driver override no longer drops the request (see FOLLOW_DRIVER_OFF_FILE).
     lat_active = (CC.latActive and secoc_ok and (self.follow_driver or not CS.driver_intervening)
                   and not standstill_pause and not self._angle_override_latch)
-    following = lat_active and CS.driver_intervening
 
     # Smooth re-entry after any pause (driver override release, or crossing the standstill
     # speed) while the session stays engaged: hold Req=0 for RESUME_HOLD_TICKS (extended by the
@@ -430,12 +431,20 @@ class CarController(CarControllerBase):
     angle_comp = self.angle_comp if lat_active else 0.0
     # Follow-the-driver: during an override the target is the wheel itself (the EPS holds it where
     # the driver puts it instead of pulling back); afterwards it blends back to the model target.
-    if following:
-      self.follow_blend = 0.0
-    elif self.follow_blend < 1.0:
-      self.follow_blend = min(1.0, self.follow_blend + DT_CTRL / FOLLOW_BLEND_S)
+    # Driver authority (1 - follow_blend) rises with driver torque immediately and continuously
+    # (FOLLOW_TQ_START .. FOLLOW_TQ_FULL), so the target starts yielding as soon as the driver leans
+    # on the wheel; the 3 Nm override latch / EPS intervention bit still force full authority. Waiting
+    # for the latch alone made the EPS hold the model's line at full stiffness until 3 Nm, then let
+    # go all at once: a delay, then a jump and an overcorrection (on-vehicle 2026-11-12). Authority
+    # decays back over FOLLOW_BLEND_S once the driver eases off.
+    if self.follow_driver and lat_active:
+      authority = 1.0 if CS.driver_intervening else float(np.clip(
+        (abs(CS.out.steeringTorque) - FOLLOW_TQ_START) / (FOLLOW_TQ_FULL - FOLLOW_TQ_START), 0.0, 1.0))
+    else:
+      authority = 0.0
+    self.follow_blend = min(1.0 - authority, self.follow_blend + DT_CTRL / FOLLOW_BLEND_S)
     meas_angle = CS.out.steeringAngleDeg
-    if following:
+    if self.follow_blend < 1.0:
       # steeringTorque and steeringAngleDeg share a sign (+ = CCW / left), so this leads the wheel
       # the way the driver is turning it.
       meas_angle += follow_lead(CS.out.steeringTorque, CS.out.vEgoRaw)

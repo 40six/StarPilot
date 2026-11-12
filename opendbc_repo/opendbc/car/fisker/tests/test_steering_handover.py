@@ -572,7 +572,7 @@ def test_follow_driver_leads_in_push_direction(car):
   controller, cs = _comp_controller(car)
   cc = structs.CarControl(latActive=True)
   cs.driver_intervening = True
-  for torque, expected in ((-2.0, -6.0 - 0.9), (+1.0, -6.0 + 0.3), (-8.0, -6.0 - ccmod.FOLLOW_LEAD_MAX)):
+  for torque, expected in ((-2.0, -6.0 - 1.8 * 0.6), (+1.0, -6.0 + 0.8 * 0.6), (-8.0, -6.0 - ccmod.FOLLOW_LEAD_MAX)):
     cs.out = structs.CarState(steeringAngleDeg=-6.0, vEgoRaw=15.0, steeringTorque=torque)
     for t in range(200):
       _, frames = controller.update(cc.as_reader(), cs, t * 10_000_000)
@@ -581,9 +581,28 @@ def test_follow_driver_leads_in_push_direction(car):
 
 def test_follow_lead_deadband_speed_scaling_and_cap():
   lead = ccmod.follow_lead
-  assert lead(0.4, 15.0) == 0.0 and lead(-0.4, 15.0) == 0.0          # resting hands: no lead
-  assert lead(2.0, 5.0) == pytest.approx(1.5 * 1.0)                    # low speed: 1.0 deg/Nm
-  assert lead(2.0, 30.0) == pytest.approx(1.5 * 0.15)                  # highway: 0.15 deg/Nm
-  assert lead(-2.0, 30.0) == pytest.approx(-1.5 * 0.15)                # sign follows the push
+  assert lead(0.15, 15.0) == 0.0 and lead(-0.15, 15.0) == 0.0        # below the deadband: no lead
+  assert lead(2.0, 5.0) == pytest.approx(1.8 * 1.0)                    # low speed: 1.0 deg/Nm
+  assert lead(2.0, 30.0) == pytest.approx(1.8 * 0.15)                  # highway: 0.15 deg/Nm
+  assert lead(-2.0, 30.0) == pytest.approx(-1.8 * 0.15)                # sign follows the push
   assert lead(8.0, 5.0) == ccmod.FOLLOW_LEAD_MAX                       # capped
   assert abs(lead(2.0, 30.0)) < abs(lead(2.0, 15.0)) < abs(lead(2.0, 5.0))
+
+
+def test_driver_authority_is_continuous_and_immediate(car):
+  # Leaning on the wheel yields at once in proportion to torque (no wait for the 3 Nm latch):
+  # nothing at resting hands, partial in between, full from FOLLOW_TQ_FULL.
+  controller, cs = _comp_controller(car)
+  cc = structs.CarControl(latActive=True)
+  cs.driver_intervening = False
+  mid = (ccmod.FOLLOW_TQ_START + ccmod.FOLLOW_TQ_FULL) / 2
+  for torque, blend in ((0.2, 1.0), (mid, 0.5), (ccmod.FOLLOW_TQ_FULL, 0.0), (-mid, 0.5)):
+    controller.follow_blend = 1.0
+    cs.out = structs.CarState(steeringAngleDeg=-3.0, vEgoRaw=20.0, steeringTorque=torque)
+    controller.update(cc.as_reader(), cs, 0)
+    assert controller.follow_blend == pytest.approx(blend, abs=0.01), torque
+  # Easing off: authority decays over FOLLOW_BLEND_S, never jumps back to the model.
+  cs.out = structs.CarState(steeringAngleDeg=-3.0, vEgoRaw=20.0, steeringTorque=0.0)
+  controller.follow_blend = 0.0
+  controller.update(cc.as_reader(), cs, 0)
+  assert controller.follow_blend == pytest.approx(0.01)
