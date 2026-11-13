@@ -76,6 +76,22 @@ ANGLE_COMP_STEADY_STEP = 0.05   # deg per 10 ms tick: wheel must be steady
 # params library, which the prebuilt tree can't do). None disables load/save (tests).
 ANGLE_COMP_FILE: str | None = "/data/fisker_angle_comp"
 
+# Turn hold (CarController._update_turn_comp). In sustained curves the EPS settles short of the
+# commanded angle, toward center, in both directions: routes 000000ca/000000d0 (2026-11-12/13) show
+# the wheel 0.3-0.7 deg short at every speed band (meas/desired 0.87-0.95), after angle comp, while
+# the command itself matched latcontrol within 0.2 deg. On the highway that is ~0.5 m of drift over
+# a few seconds that the model then has to correct, which feels like a late, wide turn-in.
+# angle_comp can't cover it: it is one persistent offset learned near center, and a toward-center
+# shortfall flips sign with the turn direction. So a separate, fast integrator runs only while in a
+# curve and fades out after it. Gated on the curve's lateral acceleration (from the requested
+# curvature), not wheel angle, so the ~-1.4 deg angle offset on straights doesn't count as a turn.
+TURN_COMP_MIN_LAT_ACCEL = 0.5   # m/s^2: in a curve (|curvature| * v^2)
+TURN_COMP_MIN_SPEED = 5.0       # m/s: intersection turns are never steady; leave them to the model
+TURN_COMP_TAU_S = 2.0           # s: a 0.5 deg shortfall is mostly closed within a few seconds
+TURN_COMP_DECAY_S = 1.0         # s: fade back to zero once out of the curve
+TURN_COMP_MAX = 1.5             # deg, hard cap
+TURN_COMP_MAX_ERROR = 3.0       # deg: ignore transients (turn-in, overrides)
+
 # Follow-the-driver override: while the driver is overriding, keep the lateral request active and
 # move the target with the wheel instead of releasing the EPS. The old release (Req=0 until driver
 # torque < OVERRIDE_RELEASE_TORQUE) never resumed mid-curve: holding a curve without assist takes
@@ -204,6 +220,8 @@ class CarController(CarControllerBase):
     self._comp_prev_angle = 0.0
     self._comp_log_ticks = 0
     self._comp_cooldown = 0
+    self.turn_comp = 0.0                # in-curve shortfall correction (see _update_turn_comp)
+    self._turn_prev_angle = 0.0
 
     # "We ARE OEM" AliveCounter substitution: every OEM 0x1D0/0x1C0 tick that panda
     # blocks, we transmit a frame with the SAME AliveCounter that OEM would have sent —
@@ -298,7 +316,27 @@ class CarController(CarControllerBase):
       carlog.error("Fisker SecOC key mismatch — GW sync MAC does not match stored SecOCKey")
       self.secoc_warn_logged = True
 
-  def _update_angle_comp(self, CS, desired_angle_deg: float, lat_active: bool) -> None:
+  def _update_turn_comp(self, CS, desired_angle_deg: float, curvature: float, lat_active: bool) -> bool:
+    """Close the EPS's toward-center shortfall in sustained curves (see TURN_COMP_*).
+
+    Integrates (desired - measured) while actively and steadily steering through a curve, and
+    decays to zero once out of it. Returns whether we are in a curve, so angle_comp (a near-center
+    learner) can stay out of the way.
+    """
+    meas = CS.out.steeringAngleDeg
+    speed = CS.out.vEgoRaw
+    steady = abs(meas - self._turn_prev_angle) < ANGLE_COMP_STEADY_STEP
+    self._turn_prev_angle = meas
+    in_turn = speed > TURN_COMP_MIN_SPEED and abs(curvature) * speed ** 2 > TURN_COMP_MIN_LAT_ACCEL
+    error = desired_angle_deg - meas
+    if not (lat_active and in_turn):
+      self.turn_comp *= 1.0 - DT_CTRL / TURN_COMP_DECAY_S
+    elif (steady and CS.eps_lat_sts == 2 and not CS.out.steeringPressed and not CS.driver_intervening
+          and self._comp_cooldown == 0 and abs(error) < TURN_COMP_MAX_ERROR):
+      self.turn_comp = float(np.clip(self.turn_comp + error * DT_CTRL / TURN_COMP_TAU_S, -TURN_COMP_MAX, TURN_COMP_MAX))
+    return in_turn
+
+  def _update_angle_comp(self, CS, desired_angle_deg: float, lat_active: bool, in_turn: bool = False) -> None:
     """Learn the EPS's steady angle-tracking gap and fold it into the command.
 
     The Ocean's EPS settles ~1 deg to the right of the commanded angle, at every speed (lane-bias
@@ -318,7 +356,7 @@ class CarController(CarControllerBase):
       self._comp_cooldown = ANGLE_COMP_COOLDOWN_TICKS
     elif self._comp_cooldown > 0:
       self._comp_cooldown -= 1
-    if (lat_active and steady and CS.eps_lat_sts == 2 and not CS.out.steeringPressed and not CS.driver_intervening
+    if (lat_active and not in_turn and steady and CS.eps_lat_sts == 2 and not CS.out.steeringPressed and not CS.driver_intervening
         and self._comp_cooldown == 0 and abs(desired_angle_deg) < ANGLE_COMP_MAX_DESIRED
         and CS.out.vEgoRaw > ANGLE_COMP_MIN_SPEED and abs(meas) < ANGLE_COMP_MAX_ANGLE and abs(error) < ANGLE_COMP_MAX_ERROR):
       self.angle_comp = float(np.clip(self.angle_comp + error * DT_CTRL / ANGLE_COMP_TAU_S, -ANGLE_COMP_MAX, ANGLE_COMP_MAX))
@@ -456,8 +494,10 @@ class CarController(CarControllerBase):
       lat_active = False   # Req=0 and follow the wheel, while still transmitting
 
     desired_angle_deg = float(actuators.steeringAngleDeg)
-    self._update_angle_comp(CS, desired_angle_deg, lat_active)
-    angle_comp = self.angle_comp if lat_active else 0.0
+    in_turn = self._update_turn_comp(CS, desired_angle_deg, float(actuators.curvature), lat_active)
+    self._update_angle_comp(CS, desired_angle_deg, lat_active, in_turn)
+    # Both corrections ride in the command (and come back out of the reported output angle).
+    angle_comp = (self.angle_comp + self.turn_comp) if lat_active else 0.0
     # Follow-the-driver: during an override the target is the wheel itself (the EPS holds it where
     # the driver puts it instead of pulling back); afterwards it blends back to the model target.
     # Driver authority (1 - follow_blend) rises with driver torque immediately and continuously

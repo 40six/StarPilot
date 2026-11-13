@@ -443,10 +443,11 @@ def _comp_controller(car):
   return controller, cs
 
 
-def _run_comp(controller, cs, ticks, meas=-1.0, desired=0.0, speed=25.0, pressed=False):
+def _run_comp(controller, cs, ticks, meas=-1.0, desired=0.0, speed=25.0, pressed=False, lat_accel=0.0):
   cs.out = structs.CarState(steeringAngleDeg=meas, vEgoRaw=speed, steeringPressed=pressed)
   cc = structs.CarControl(latActive=True)
   cc.actuators.steeringAngleDeg = desired
+  cc.actuators.curvature = lat_accel / max(speed, 0.1) ** 2
   out = frames = None
   for t in range(ticks):
     out, frames = controller.update(cc.as_reader(), cs, t * 10_000_000)
@@ -648,3 +649,51 @@ def test_eps_recovery_resumes_on_low_torque_in_follow_mode(car):
   controller.update(cc.as_reader(), cs, 0)
   assert not controller._override_eps_recovery
   assert controller.engage_delay_remaining == controller.ENGAGE_DELAY_TICKS
+
+
+def test_turn_comp_closes_curve_shortfall_then_fades(car):
+  # Sustained curve (1 m/s^2), wheel steady 0.5 deg short of the command toward center: the turn
+  # hold integrates it (2 s time constant) into the transmitted angle, the reported output stays in
+  # the requested frame, and angle_comp (near-center learner) stays out of it. Out of the curve the
+  # hold fades back to zero.
+  controller, cs = _comp_controller(car)
+  out, frames = _run_comp(controller, cs, 301, meas=7.5, desired=8.0, lat_accel=1.0)
+  assert controller.turn_comp == pytest.approx(0.75, abs=0.03)    # 0.5 deg x 3 s / 2 s
+  assert controller.angle_comp == 0.0
+  assert candidate_angle(frames) == pytest.approx(8.0 + controller.turn_comp, abs=0.1)
+  assert out.steeringAngleDeg == pytest.approx(8.0, abs=0.1)
+  _run_comp(controller, cs, 300, meas=0.5, desired=0.0)
+  assert abs(controller.turn_comp) < 0.05
+
+
+def test_turn_comp_is_signed_by_turn_direction(car):
+  controller, cs = _comp_controller(car)
+  _run_comp(controller, cs, 301, meas=-7.5, desired=-8.0, lat_accel=1.0)
+  assert controller.turn_comp == pytest.approx(-0.75, abs=0.03)
+
+
+@pytest.mark.parametrize("kw", [dict(pressed=True), dict(speed=4.0), dict(lat_accel=0.3), dict(meas=3.0)])
+def test_turn_comp_does_not_learn_outside_steady_curves(car, kw):
+  # driver input, intersection speeds, gentle bends (left to angle_comp), and transients (> 3 deg)
+  controller, cs = _comp_controller(car)
+  args = dict(meas=7.5, desired=8.0, lat_accel=1.0) | kw
+  _run_comp(controller, cs, 300, **args)
+  assert controller.turn_comp == 0.0
+
+
+def test_turn_comp_is_capped_and_needs_active_eps(car):
+  controller, cs = _comp_controller(car)
+  cs.eps_lat_sts = 1
+  _run_comp(controller, cs, 300, meas=7.5, desired=8.0, lat_accel=1.0)
+  assert controller.turn_comp == 0.0
+  cs.eps_lat_sts = 2
+  _run_comp(controller, cs, 3000, meas=5.5, desired=8.0, lat_accel=1.0)
+  assert controller.turn_comp == pytest.approx(ccmod.TURN_COMP_MAX)
+
+
+def test_angle_comp_does_not_learn_in_curves(car):
+  # A near-center wheel angle in a real curve (e.g. the highway) is the turn hold's job, not a
+  # persistent offset.
+  controller, cs = _comp_controller(car)
+  _run_comp(controller, cs, 300, meas=-1.0, desired=0.0, lat_accel=1.0)
+  assert controller.angle_comp == 0.0
